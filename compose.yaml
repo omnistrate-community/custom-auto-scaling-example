@@ -1,0 +1,20 @@
+version: '3.9'
+x-customer-integrations:
+  logs:
+  metrics:
+
+x-omnistrate-load-balancer:
+  https:
+    - name: frontend
+      description: L7 Load Balancer for Web
+      paths:
+        - associatedResourceKey: web
+          path: /
+          backendPort: 80
+
+services:
+  web:
+    image: nginxdemos/hello:0.4
+    ports:
+      - '80:80'
+    privileged: true # required by nginx demo image, we can also solve this by mounting a volume

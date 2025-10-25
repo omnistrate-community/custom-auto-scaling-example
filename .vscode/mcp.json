@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "omnistrate-ctl": {
+      "type": "stdio",
+      "command": "omnistrate-ctl",
+      "args": [
+        "mcp",
+        "start"
+      ]
+    }
+  }
+}
