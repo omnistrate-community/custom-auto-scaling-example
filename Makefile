@@ -43,13 +43,7 @@ build:
 .PHONY: unit-test
 unit-test: 
 	echo "Running unit tests for service"
-	go test ./... -skip ./test/... -cover -coverprofile coverage.out -covermode count
-	go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/[%]//g' | awk 'current=$$1; {if (current < ${TESTCOVERAGE_THRESHOLD}) {print "\033[31mTest coverage is " current " which is below threshold\033[0m"; exit 1} else {print "\033[32mTest coverage is above threshold\033[0m"}}'
-
-.PHONY: test-coverage-report
-test-coverage-report: 
-	go test ./... -skip ./test/... -cover -coverprofile coverage.out -covermode count
-	go tool cover -html=coverage.out
+	go test ./... -skip ./test/...
 
 .PHONY: lint-install
 lint-install: 

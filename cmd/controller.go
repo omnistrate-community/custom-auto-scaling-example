@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/autoscaler"
 )
@@ -130,7 +134,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"status": "healthy", "service": "autoscaler"}`)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func homeHandler(w http.ResponseWriter, r *http.Request) {
 	config := autoScaler.GetConfig()
 	fmt.Fprintf(w, `
 <!DOCTYPE html>
@@ -179,20 +183,78 @@ func handler(w http.ResponseWriter, r *http.Request) {
 `, config.TargetResource, config.InstanceID, config.CooldownDuration)
 }
 
+/**
+ * Autoscaler controller main function
+ *
+ * The controller reads configuration from environment variables:
+ * - AUTOSCALER_COOLDOWN: Cooldown period in seconds (default: 300)
+ * - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale
+ * - INSTANCE_ID: Instance ID to scale
+ *
+ * It exposes HTTP endpoints:
+ * - POST /scale: Scale to target capacity
+ * - GET /status: Get current capacity and status
+ * - GET /health: Health check
+ *
+ * The autoscaler will:
+ * 1. Get current capacity using omnistrate_api
+ * 2. Wait for instance to be ACTIVE if not already
+ * 3. Respect cooldown period between scaling operations
+ * 4. Add or remove capacity to match target
+ */
 func main() {
-	http.HandleFunc("/", handler)
+	// Setup HTTP routes
+	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/scale", scaleHandler)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/health", healthHandler)
 
-	port := "8080"
-	log.Printf("Starting autoscaler service on port %s", port)
-	log.Printf("Endpoints:")
-	log.Printf("  POST /scale - Scale to target capacity")
-	log.Printf("  GET /status - Get current status")
-	log.Printf("  GET /health - Health check")
+	// Setup graceful shutdown
+	chExit := make(chan os.Signal, 1)
+	signal.Notify(chExit, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// Start HTTP server in goroutine
+	port := "8080"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = envPort
 	}
+
+	server := &http.Server{
+		Addr:         ":" + port,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		log.Printf("Starting autoscaler controller on port %s", port)
+		log.Printf("Environment variables required:")
+		log.Printf("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds")
+		log.Printf("  - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale")
+		log.Printf("  - INSTANCE_ID: Instance ID to scale")
+		log.Printf("")
+		log.Printf("Available endpoints:")
+		log.Printf("  POST /scale - Scale to target capacity")
+		log.Printf("  GET /status - Get current status")
+		log.Printf("  GET /health - Health check")
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-chExit
+	log.Println("Shutting down gracefully...")
+
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Shutdown server
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Error during shutdown: %v", err)
+	}
+
+	log.Println("Autoscaler controller stopped")
 }

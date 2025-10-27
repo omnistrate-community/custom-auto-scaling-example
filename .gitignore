@@ -4,3 +4,7 @@
 .terraform
 .terraform.lock.hcl
 .DS_Store
+
+# binaries
+controller
+custom-auto-scaling-example

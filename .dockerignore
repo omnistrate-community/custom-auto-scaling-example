@@ -23,3 +23,7 @@ go.sum
 # IDE/editor config files
 .vscode/
 .idea/
+
+# binaries
+controller
+custom-auto-scaling-example
