@@ -3,6 +3,12 @@
 .terraform
 .terraform.lock.hcl
 .DS_Store
+.dockerignore
+.DS_Store
+.git
+.github
+.omnistrate
+.github
 
 # Binaries
 main
@@ -17,8 +23,3 @@ go.sum
 # IDE/editor config files
 .vscode/
 .idea/
-
-# OS generated files
-.DS_Store
-````
-
