@@ -20,6 +20,7 @@ services:
     environment:
       - AUTOSCALER_COOLDOWN=300
       - AUTOSCALER_TARGET_RESOURCE=worker
+      - AUTOSCALER_STEPS=1
 
   worker:
     image: busybox
