@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/pkg/errors"
 )
 
@@ -24,15 +25,20 @@ type Client interface {
  * This file contains all APIs used to interact with omnistrate platform via local sidecar.
  */
 type ClientImpl struct {
-	httpClient *http.Client
+	httpClient *retryablehttp.Client
 }
 
 func NewClient() Client {
-	return &ClientImpl{&http.Client{Timeout: 60 * time.Second, Transport: http.DefaultTransport}}
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 1 * time.Second
+	retryClient.RetryWaitMax = 30 * time.Second
+	retryClient.HTTPClient.Timeout = 60 * time.Second
+	return &ClientImpl{retryClient}
 }
 
 func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+resourceAlias+"/capacity", nil)
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, baseURL+resourceAlias+"/capacity", nil)
 	if err != nil {
 		return
 	}
@@ -64,7 +70,7 @@ func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias strin
 }
 
 func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/add", nil)
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/add", nil)
 	if err != nil {
 		return ResourceInstanceCapacity{}, err
 	}
@@ -97,7 +103,7 @@ func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string) (res
 }
 
 func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/remove", nil)
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/remove", nil)
 	if err != nil {
 		err = errors.Wrapf(err, "Failed to create remove capacity request for resourceAlias: %s", resourceAlias)
 		return
