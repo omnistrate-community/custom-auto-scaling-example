@@ -190,10 +190,14 @@ func TestConfigFromEnv_DryRunVariations(t *testing.T) {
 	}{
 		{"1", "1", true},
 		{"0", "0", false},
-		{"yes", "yes", true},
-		{"no", "no", false},
+		{"t", "t", true},
+		{"f", "f", false},
+		{"T", "T", true},
+		{"F", "F", false},
 		{"TRUE", "TRUE", true},
 		{"FALSE", "FALSE", false},
+		{"true", "true", true},
+		{"false", "false", false},
 	}
 
 	for _, tc := range testCases {
