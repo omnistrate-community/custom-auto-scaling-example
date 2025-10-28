@@ -4,28 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
 	"time"
 
+	"github.com/omnistrate-community/custom-auto-scaling-example/internal/config"
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/omnistrate_api"
 )
 
-type Config struct {
-	CooldownDuration time.Duration
-	TargetResource   string
-	InstanceID       string
-}
-
 type Autoscaler struct {
-	config         *Config
+	config         *config.Config
 	client         *omnistrate_api.Client
 	lastActionTime time.Time
 }
 
 // NewAutoscaler creates a new autoscaler instance with configuration from environment variables
 func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
-	config, err := loadConfigFromEnv()
+	config, err := config.NewConfigFromEnv()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -35,37 +28,6 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 	return &Autoscaler{
 		config: config,
 		client: client,
-	}, nil
-}
-
-// loadConfigFromEnv loads configuration from environment variables
-func loadConfigFromEnv() (*Config, error) {
-	// Get cooldown duration
-	cooldownStr := os.Getenv("AUTOSCALER_COOLDOWN")
-	if cooldownStr == "" {
-		cooldownStr = "300" // Default 5 minutes
-	}
-	cooldownSeconds, err := strconv.Atoi(cooldownStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid AUTOSCALER_COOLDOWN value: %s", cooldownStr)
-	}
-
-	// Get target resource
-	targetResource := os.Getenv("AUTOSCALER_TARGET_RESOURCE")
-	if targetResource == "" {
-		return nil, fmt.Errorf("AUTOSCALER_TARGET_RESOURCE environment variable is required")
-	}
-
-	// Get instance ID
-	instanceID := os.Getenv("INSTANCE_ID")
-	if instanceID == "" {
-		return nil, fmt.Errorf("INSTANCE_ID environment variable is required")
-	}
-
-	return &Config{
-		CooldownDuration: time.Duration(cooldownSeconds) * time.Second,
-		TargetResource:   targetResource,
-		InstanceID:       instanceID,
 	}, nil
 }
 
@@ -120,7 +82,7 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 
 // getCurrentCapacity gets the current capacity of the resource
 func (a *Autoscaler) getCurrentCapacity(ctx context.Context) (*omnistrate_api.ResourceInstanceCapacity, error) {
-	capacity, err := a.client.GetCurrentCapacity(ctx, a.config.InstanceID, a.config.TargetResource)
+	capacity, err := a.client.GetCurrentCapacity(ctx, a.config.TargetResource)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +132,7 @@ func (a *Autoscaler) scaleUp(ctx context.Context, increaseBy int) error {
 	log.Printf("Scaling up by %d instances", increaseBy)
 
 	for i := 0; i < increaseBy; i++ {
-		_, err := a.client.AddCapacity(ctx, a.config.InstanceID, a.config.TargetResource)
+		_, err := a.client.AddCapacity(ctx, a.config.TargetResource)
 		if err != nil {
 			return fmt.Errorf("failed to add capacity (iteration %d): %w", i+1, err)
 		}
@@ -190,7 +152,7 @@ func (a *Autoscaler) scaleDown(ctx context.Context, decreaseBy int) error {
 	log.Printf("Scaling down by %d instances", decreaseBy)
 
 	for i := 0; i < decreaseBy; i++ {
-		_, err := a.client.RemoveCapacity(ctx, a.config.InstanceID, a.config.TargetResource)
+		_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource)
 		if err != nil {
 			return fmt.Errorf("failed to remove capacity (iteration %d): %w", i+1, err)
 		}
@@ -211,6 +173,6 @@ func (a *Autoscaler) GetCurrentCapacity(ctx context.Context) (*omnistrate_api.Re
 }
 
 // GetConfig returns the current configuration
-func (a *Autoscaler) GetConfig() *Config {
+func (a *Autoscaler) GetConfig() *config.Config {
 	return a.config
 }

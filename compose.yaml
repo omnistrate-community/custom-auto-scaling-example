@@ -17,6 +17,9 @@ services:
     image: nginxdemos/hello:0.4
     ports:
       - '3000:3000'
+    environment:
+      - AUTOSCALER_COOLDOWN=300
+      - AUTOSCALER_TARGET_RESOURCE=worker
 
   worker:
     image: busybox

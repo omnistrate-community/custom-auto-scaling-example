@@ -156,7 +156,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
         <div class="config">
             <h2>Configuration</h2>
             <p><strong>Target Resource:</strong> %s</p>
-            <p><strong>Instance ID:</strong> %s</p>
             <p><strong>Cooldown Duration:</strong> %v</p>
         </div>
 
@@ -180,7 +179,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
     </div>
 </body>
 </html>
-`, config.TargetResource, config.InstanceID, config.CooldownDuration)
+`, config.TargetResource, config.CooldownDuration)
 }
 
 /**
@@ -189,7 +188,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
  * The controller reads configuration from environment variables:
  * - AUTOSCALER_COOLDOWN: Cooldown period in seconds (default: 300)
  * - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale
- * - INSTANCE_ID: Instance ID to scale
  *
  * It exposes HTTP endpoints:
  * - POST /scale: Scale to target capacity
@@ -231,7 +229,6 @@ func main() {
 		log.Printf("Environment variables required:")
 		log.Printf("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds")
 		log.Printf("  - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale")
-		log.Printf("  - INSTANCE_ID: Instance ID to scale")
 		log.Printf("")
 		log.Printf("Available endpoints:")
 		log.Printf("  POST /scale - Scale to target capacity")
