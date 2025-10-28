@@ -95,6 +95,12 @@ func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string, capa
 		}, nil
 	}
 
+	if capacityToBeAdded == 0 {
+		return ResourceInstance{
+			ResourceAlias: resourceAlias,
+		}, nil
+	}
+
 	reqBody := map[string]float64{
 		capacityToBeAddedField: float64(capacityToBeAdded),
 	}
@@ -132,6 +138,12 @@ func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string, capa
 
 func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string, capacityToBeRemoved uint) (resp ResourceInstance, err error) {
 	if c.config.DryRun {
+		return ResourceInstance{
+			ResourceAlias: resourceAlias,
+		}, nil
+	}
+
+	if capacityToBeRemoved == 0 {
 		return ResourceInstance{
 			ResourceAlias: resourceAlias,
 		}, nil

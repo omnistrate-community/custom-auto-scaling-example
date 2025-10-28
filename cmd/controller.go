@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/autoscaler"
+	"github.com/omnistrate-community/custom-auto-scaling-example/internal/logger"
 )
 
 type ScaleRequest struct {
@@ -34,13 +34,16 @@ type StatusResponse struct {
 var autoScaler *autoscaler.Autoscaler
 
 func init() {
+	// Initialize logger first
+	logger.InitLogger()
+
 	ctx := context.Background()
 	var err error
 	autoScaler, err = autoscaler.NewAutoscaler(ctx)
 	if err != nil {
-		log.Fatalf("Failed to initialize autoscaler: %v", err)
+		logger.Fatal().Err(err).Msg("Failed to initialize autoscaler")
 	}
-	log.Printf("Autoscaler initialized successfully")
+	logger.Info().Msg("Autoscaler initialized successfully")
 }
 
 func scaleHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +81,7 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	err := autoScaler.ScaleToTarget(ctx, req.TargetCapacity)
 	if err != nil {
-		log.Printf("Scaling failed: %v", err)
+		logger.Error().Err(err).Msg("Scaling failed")
 		response := ScaleResponse{
 			Success: false,
 			Error:   fmt.Sprintf("Scaling failed: %v", err),
@@ -107,7 +110,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	capacity, err := autoScaler.GetCurrentCapacity(ctx)
 	if err != nil {
-		log.Printf("Failed to get current capacity: %v", err)
+		logger.Error().Err(err).Msg("Failed to get current capacity")
 		response := ScaleResponse{
 			Success: false,
 			Error:   fmt.Sprintf("Failed to get current capacity: %v", err),
@@ -225,24 +228,24 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Starting autoscaler controller on port %s", port)
-		log.Printf("Environment variables required:")
-		log.Printf("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds")
-		log.Printf("  - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale")
-		log.Printf("")
-		log.Printf("Available endpoints:")
-		log.Printf("  POST /scale - Scale to target capacity")
-		log.Printf("  GET /status - Get current status")
-		log.Printf("  GET /health - Health check")
+		logger.Info().Str("port", port).Msg("Starting autoscaler controller")
+		logger.Info().Msg("Environment variables required:")
+		logger.Info().Msg("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds")
+		logger.Info().Msg("  - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale")
+		logger.Info().Msg("")
+		logger.Info().Msg("Available endpoints:")
+		logger.Info().Msg("  POST /scale - Scale to target capacity")
+		logger.Info().Msg("  GET /status - Get current status")
+		logger.Info().Msg("  GET /health - Health check")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed to start: %v", err)
+			logger.Fatal().Err(err).Msg("Server failed to start")
 		}
 	}()
 
 	// Wait for shutdown signal
 	<-chExit
-	log.Println("Shutting down gracefully...")
+	logger.Info().Msg("Shutting down gracefully...")
 
 	// Create shutdown context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -250,8 +253,8 @@ func main() {
 
 	// Shutdown server
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Error during shutdown: %v", err)
+		logger.Error().Err(err).Msg("Error during shutdown")
 	}
 
-	log.Println("Autoscaler controller stopped")
+	logger.Info().Msg("Autoscaler controller stopped")
 }

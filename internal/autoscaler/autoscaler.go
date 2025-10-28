@@ -3,10 +3,10 @@ package autoscaler
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/config"
+	"github.com/omnistrate-community/custom-auto-scaling-example/internal/logger"
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/omnistrate_api"
 )
 
@@ -33,12 +33,12 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 
 // ScaleToTarget scales the resource to match the target capacity
 func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) error {
-	log.Printf("Scaling to target capacity: %d", targetCapacity)
+	logger.Info().Int("targetCapacity", targetCapacity).Msg("Scaling to target capacity")
 
 	// Check if we're within cooldown period
 	if !a.lastActionTime.IsZero() && time.Since(a.lastActionTime) < a.config.CooldownDuration {
 		waitTime := a.config.CooldownDuration - time.Since(a.lastActionTime)
-		log.Printf("Within cooldown period, waiting %v before scaling", waitTime)
+		logger.Info().Dur("waitTime", waitTime).Msg("Within cooldown period, waiting before scaling")
 		time.Sleep(waitTime)
 	}
 
@@ -48,11 +48,14 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 		return fmt.Errorf("failed to get current capacity: %w", err)
 	}
 
-	log.Printf("Current capacity: %d, Target capacity: %d", currentCapacity.CurrentCapacity, targetCapacity)
+	logger.Info().
+		Int("currentCapacity", currentCapacity.CurrentCapacity).
+		Int("targetCapacity", targetCapacity).
+		Msg("Current and target capacity")
 
 	// Check if scaling is needed
 	if currentCapacity.CurrentCapacity == targetCapacity {
-		log.Printf("Already at target capacity: %d", targetCapacity)
+		logger.Info().Int("capacity", targetCapacity).Msg("Already at target capacity")
 		return nil
 	}
 
@@ -75,7 +78,7 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 
 	// Update last action time
 	a.lastActionTime = time.Now()
-	log.Printf("Scaling operation completed successfully")
+	logger.Info().Msg("Scaling operation completed successfully")
 
 	return nil
 }
@@ -91,7 +94,7 @@ func (a *Autoscaler) getCurrentCapacity(ctx context.Context) (*omnistrate_api.Re
 
 // waitForActiveState waits for the instance to be in ACTIVE state
 func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
-	log.Printf("Waiting for instance to be in ACTIVE state")
+	logger.Info().Msg("Waiting for instance to be in ACTIVE state")
 
 	maxWaitTime := 10 * time.Minute
 	checkInterval := 30 * time.Second
@@ -108,13 +111,13 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 		case <-ticker.C:
 			capacity, err := a.getCurrentCapacity(ctx)
 			if err != nil {
-				log.Printf("Error checking instance status: %v", err)
+				logger.Warn().Err(err).Msg("Error checking instance status")
 				continue
 			}
 
-			log.Printf("Current instance status: %s", capacity.Status)
+			logger.Debug().Str("status", string(capacity.Status)).Msg("Current instance status")
 			if capacity.Status == omnistrate_api.ACTIVE {
-				log.Printf("Instance is now ACTIVE")
+				logger.Info().Msg("Instance is now ACTIVE")
 				return nil
 			}
 
@@ -122,21 +125,21 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 				return fmt.Errorf("instance is in FAILED state")
 			}
 
-			log.Printf("Instance status is %s, waiting...", capacity.Status)
+			logger.Debug().Str("status", string(capacity.Status)).Msg("Instance status is not ACTIVE, waiting")
 		}
 	}
 }
 
 // scaleUp adds capacity to the resource
 func (a *Autoscaler) scaleUp(ctx context.Context, increaseBy int) error {
-	log.Printf("Scaling up by %d instances", increaseBy)
+	logger.Info().Int("increaseBy", increaseBy).Msg("Scaling up instances")
 
 	for i := 0; i < increaseBy; i++ {
 		_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
 		if err != nil {
 			return fmt.Errorf("failed to add capacity (iteration %d): %w", i+1, err)
 		}
-		log.Printf("Added capacity: %d/%d", i+1, increaseBy)
+		logger.Info().Int("current", i+1).Int("total", increaseBy).Msg("Added capacity")
 
 		// Small delay between operations to avoid overwhelming the API
 		if i < increaseBy-1 {
@@ -149,14 +152,14 @@ func (a *Autoscaler) scaleUp(ctx context.Context, increaseBy int) error {
 
 // scaleDown removes capacity from the resource
 func (a *Autoscaler) scaleDown(ctx context.Context, decreaseBy int) error {
-	log.Printf("Scaling down by %d instances", decreaseBy)
+	logger.Info().Int("decreaseBy", decreaseBy).Msg("Scaling down instances")
 
 	for i := 0; i < decreaseBy; i++ {
 		_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
 		if err != nil {
 			return fmt.Errorf("failed to remove capacity (iteration %d): %w", i+1, err)
 		}
-		log.Printf("Removed capacity: %d/%d", i+1, decreaseBy)
+		logger.Info().Int("current", i+1).Int("total", decreaseBy).Msg("Removed capacity")
 
 		// Small delay between operations to avoid overwhelming the API
 		if i < decreaseBy-1 {
