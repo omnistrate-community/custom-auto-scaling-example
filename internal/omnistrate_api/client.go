@@ -28,13 +28,17 @@ type ClientImpl struct {
 	httpClient *retryablehttp.Client
 }
 
+func NewWithHTTPClient(httpClient *retryablehttp.Client) Client {
+	return &ClientImpl{httpClient}
+}
+
 func NewClient() Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 3
 	retryClient.RetryWaitMin = 1 * time.Second
 	retryClient.RetryWaitMax = 30 * time.Second
 	retryClient.HTTPClient.Timeout = 60 * time.Second
-	return &ClientImpl{retryClient}
+	return NewWithHTTPClient(retryClient)
 }
 
 func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
