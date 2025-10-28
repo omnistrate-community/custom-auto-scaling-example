@@ -3,6 +3,7 @@ package omnistrate_api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -12,13 +13,18 @@ import (
 )
 
 const (
-	baseURL = "http://127.0.0.1:49750/resource/"
+	baseURL                  = "http://127.0.0.1:49750/resource/"
+	addCapacityURL           = baseURL + "%s/capacity/add"
+	removeCapacityURL        = baseURL + "%s/capacity/remove"
+	getCapacityURL           = baseURL + "%s/capacity"
+	capacityToBeAddedField   = "capacityToBeAdded"
+	capacityToBeRemovedField = "capacityToBeRemoved"
 )
 
 type Client interface {
 	GetCurrentCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
-	AddCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
-	RemoveCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
+	AddCapacity(ctx context.Context, resourceAlias string, capacityToBeAdded uint) (ResourceInstanceCapacity, error)
+	RemoveCapacity(ctx context.Context, resourceAlias string, capacityToBeRemoved uint) (ResourceInstanceCapacity, error)
 }
 
 /**
@@ -42,7 +48,7 @@ func NewClient() Client {
 }
 
 func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, baseURL+resourceAlias+"/capacity", nil)
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(getCapacityURL, resourceAlias), nil)
 	if err != nil {
 		return
 	}
@@ -73,8 +79,11 @@ func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias strin
 	return
 }
 
-func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/add", nil)
+func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string, capacityToBeAdded uint) (resp ResourceInstanceCapacity, err error) {
+	reqBody := map[string]float64{
+		capacityToBeAddedField: float64(capacityToBeAdded),
+	}
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(addCapacityURL, resourceAlias), reqBody)
 	if err != nil {
 		return ResourceInstanceCapacity{}, err
 	}
@@ -106,8 +115,11 @@ func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string) (res
 	return resp, nil
 }
 
-func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/remove", nil)
+func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string, capacityToBeRemoved uint) (resp ResourceInstanceCapacity, err error) {
+	reqBody := map[string]float64{
+		capacityToBeRemovedField: float64(capacityToBeRemoved),
+	}
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(removeCapacityURL, resourceAlias), reqBody)
 	if err != nil {
 		err = errors.Wrapf(err, "Failed to create remove capacity request for resourceAlias: %s", resourceAlias)
 		return

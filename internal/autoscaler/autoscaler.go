@@ -132,7 +132,7 @@ func (a *Autoscaler) scaleUp(ctx context.Context, increaseBy int) error {
 	log.Printf("Scaling up by %d instances", increaseBy)
 
 	for i := 0; i < increaseBy; i++ {
-		_, err := a.client.AddCapacity(ctx, a.config.TargetResource)
+		_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
 		if err != nil {
 			return fmt.Errorf("failed to add capacity (iteration %d): %w", i+1, err)
 		}
@@ -152,7 +152,7 @@ func (a *Autoscaler) scaleDown(ctx context.Context, decreaseBy int) error {
 	log.Printf("Scaling down by %d instances", decreaseBy)
 
 	for i := 0; i < decreaseBy; i++ {
-		_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource)
+		_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
 		if err != nil {
 			return fmt.Errorf("failed to remove capacity (iteration %d): %w", i+1, err)
 		}
