@@ -11,6 +11,7 @@ type Config struct {
 	CooldownDuration time.Duration
 	TargetResource   string
 	Steps            uint
+	DryRun           bool
 }
 
 // NewConfigFromEnv loads configuration from environment variables
@@ -41,9 +42,20 @@ func NewConfigFromEnv() (*Config, error) {
 		return nil, fmt.Errorf("invalid AUTOSCALER_STEPS value: %s", stepsStr)
 	}
 
+	// Get dry run flag
+	dryRunStr := os.Getenv("DRY_RUN")
+	dryRun := false // Default to false
+	if dryRunStr != "" {
+		dryRun, err = strconv.ParseBool(dryRunStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid DRY_RUN value: %s", dryRunStr)
+		}
+	}
+
 	return &Config{
 		CooldownDuration: time.Duration(cooldownSeconds) * time.Second,
 		TargetResource:   targetResource,
 		Steps:            uint(steps),
+		DryRun:           dryRun,
 	}, nil
 }

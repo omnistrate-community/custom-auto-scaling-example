@@ -80,8 +80,7 @@ jobs:
       - name: Unit test
         timeout-minutes: 10 
         run: |
-          gotestsum --format github-actions -- ./... -skip test -cover -coverprofile coverage.out -covermode count
-          go tool cover -func=coverage.out -o coverage-report.txt
+          gotestsum --format github-actions -- ./... -skip test
           
   bump-version:
     if: github.event_name != 'pull_request' && github.event_name != 'release'

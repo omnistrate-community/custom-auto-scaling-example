@@ -23,7 +23,7 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	client := omnistrate_api.NewClient()
+	client := omnistrate_api.NewClient(config)
 
 	return &Autoscaler{
 		config: config,
