@@ -67,9 +67,9 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 
 	// Perform scaling operation
 	if currentCapacity.CurrentCapacity < targetCapacity {
-		err = a.scaleUp(ctx, targetCapacity-currentCapacity.CurrentCapacity)
+		err = a.scaleUp(ctx)
 	} else {
-		err = a.scaleDown(ctx, currentCapacity.CurrentCapacity-targetCapacity)
+		err = a.scaleDown(ctx)
 	}
 
 	if err != nil {
@@ -131,42 +131,25 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 }
 
 // scaleUp adds capacity to the resource
-func (a *Autoscaler) scaleUp(ctx context.Context, increaseBy int) error {
-	logger.Info().Int("increaseBy", increaseBy).Msg("Scaling up instances")
-
-	for i := 0; i < increaseBy; i++ {
-		_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
-		if err != nil {
-			return fmt.Errorf("failed to add capacity (iteration %d): %w", i+1, err)
-		}
-		logger.Info().Int("current", i+1).Int("total", increaseBy).Msg("Added capacity")
-
-		// Small delay between operations to avoid overwhelming the API
-		if i < increaseBy-1 {
-			time.Sleep(2 * time.Second)
-		}
+func (a *Autoscaler) scaleUp(ctx context.Context) error {
+	logger.Info().Uint("increaseBy", a.config.Steps).Msg("Scaling up instances")
+	_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
+	if err != nil {
+		return fmt.Errorf("failed to add capacity: %w", err)
 	}
+	logger.Info().Uint("increaseBy", a.config.Steps).Msg("Requested to add capacity")
 
 	return nil
 }
 
 // scaleDown removes capacity from the resource
-func (a *Autoscaler) scaleDown(ctx context.Context, decreaseBy int) error {
-	logger.Info().Int("decreaseBy", decreaseBy).Msg("Scaling down instances")
-
-	for i := 0; i < decreaseBy; i++ {
-		_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
-		if err != nil {
-			return fmt.Errorf("failed to remove capacity (iteration %d): %w", i+1, err)
-		}
-		logger.Info().Int("current", i+1).Int("total", decreaseBy).Msg("Removed capacity")
-
-		// Small delay between operations to avoid overwhelming the API
-		if i < decreaseBy-1 {
-			time.Sleep(2 * time.Second)
-		}
+func (a *Autoscaler) scaleDown(ctx context.Context) error {
+	logger.Info().Uint("decreaseBy", a.config.Steps).Msg("Scaling down instances")
+	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
+	if err != nil {
+		return fmt.Errorf("failed to remove capacity: %w", err)
 	}
-
+	logger.Info().Uint("decreaseBy", a.config.Steps).Msg("Requested to remove capacity")
 	return nil
 }
 
