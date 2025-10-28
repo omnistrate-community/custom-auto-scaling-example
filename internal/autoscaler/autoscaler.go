@@ -12,7 +12,7 @@ import (
 
 type Autoscaler struct {
 	config         *config.Config
-	client         *omnistrate_api.Client
+	client         omnistrate_api.Client
 	lastActionTime time.Time
 }
 
@@ -23,7 +23,7 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	client := omnistrate_api.NewClientWithContext(ctx)
+	client := omnistrate_api.NewClient()
 
 	return &Autoscaler{
 		config: config,

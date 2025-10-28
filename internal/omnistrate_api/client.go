@@ -14,18 +14,24 @@ const (
 	baseURL = "http://127.0.0.1:49750/resource/"
 )
 
+type Client interface {
+	GetCurrentCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
+	AddCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
+	RemoveCapacity(ctx context.Context, resourceAlias string) (ResourceInstanceCapacity, error)
+}
+
 /**
  * This file contains all APIs used to interact with omnistrate platform via local sidecar.
  */
-type Client struct {
+type ClientImpl struct {
 	httpClient *http.Client
 }
 
-func NewClientWithContext(ctx context.Context) *Client {
-	return &Client{&http.Client{Timeout: 60 * time.Second, Transport: http.DefaultTransport}}
+func NewClient() Client {
+	return &ClientImpl{&http.Client{Timeout: 60 * time.Second, Transport: http.DefaultTransport}}
 }
 
-func (c *Client) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
+func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+resourceAlias+"/capacity", nil)
 	if err != nil {
 		return
@@ -57,7 +63,7 @@ func (c *Client) GetCurrentCapacity(ctx context.Context, resourceAlias string) (
 	return
 }
 
-func (c *Client) AddCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
+func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/add", nil)
 	if err != nil {
 		return ResourceInstanceCapacity{}, err
@@ -90,7 +96,7 @@ func (c *Client) AddCapacity(ctx context.Context, resourceAlias string) (resp Re
 	return resp, nil
 }
 
-func (c *Client) RemoveCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
+func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+resourceAlias+"/capacity/remove", nil)
 	if err != nil {
 		err = errors.Wrapf(err, "Failed to create remove capacity request for resourceAlias: %s", resourceAlias)

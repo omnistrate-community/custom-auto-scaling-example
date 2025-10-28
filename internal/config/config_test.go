@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 	"time"
 )
@@ -22,10 +21,8 @@ func TestConfigFields(t *testing.T) {
 
 // The following test assumes NewConfigFromEnv is available in this package.
 func TestConfigFromEnv(t *testing.T) {
-	os.Setenv("AUTOSCALER_COOLDOWN", "120")
-	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "env-resource")
-	defer os.Unsetenv("AUTOSCALER_COOLDOWN")
-	defer os.Unsetenv("AUTOSCALER_TARGET_RESOURCE")
+	t.Setenv("AUTOSCALER_COOLDOWN", "120")
+	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "env-resource")
 
 	cfg, err := NewConfigFromEnv()
 	if err != nil {
