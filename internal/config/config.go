@@ -8,10 +8,12 @@ import (
 )
 
 type Config struct {
-	CooldownDuration time.Duration
-	TargetResource   string
-	Steps            uint
-	DryRun           bool
+	CooldownDuration           time.Duration
+	TargetResource             string
+	Steps                      uint
+	DryRun                     bool
+	WaitForActiveTimeout       time.Duration
+	WaitForActiveCheckInterval time.Duration
 }
 
 // NewConfigFromEnv loads configuration from environment variables
@@ -43,19 +45,41 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// Get dry run flag
-	dryRunStr := os.Getenv("DRY_RUN")
+	dryRunStr := os.Getenv("AUTOSCALER_DRY_RUN")
 	dryRun := false // Default to false
 	if dryRunStr != "" {
 		dryRun, err = strconv.ParseBool(dryRunStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid DRY_RUN value: %s", dryRunStr)
+			return nil, fmt.Errorf("invalid AUTOSCALER_DRY_RUN value: %s", dryRunStr)
 		}
 	}
 
+	// Get wait for active timeout
+	waitForActiveTimeoutStr := os.Getenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT")
+	if waitForActiveTimeoutStr == "" {
+		waitForActiveTimeoutStr = "900" // Default 15 minutes
+	}
+	waitForActiveTimeoutSeconds, err := strconv.Atoi(waitForActiveTimeoutStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT value: %s", waitForActiveTimeoutStr)
+	}
+
+	// Get wait for active check interval
+	waitForActiveCheckIntervalStr := os.Getenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL")
+	if waitForActiveCheckIntervalStr == "" {
+		waitForActiveCheckIntervalStr = "30" // Default 30 seconds
+	}
+	waitForActiveCheckIntervalSeconds, err := strconv.Atoi(waitForActiveCheckIntervalStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL value: %s", waitForActiveCheckIntervalStr)
+	}
+
 	return &Config{
-		CooldownDuration: time.Duration(cooldownSeconds) * time.Second,
-		TargetResource:   targetResource,
-		Steps:            uint(steps),
-		DryRun:           dryRun,
+		CooldownDuration:           time.Duration(cooldownSeconds) * time.Second,
+		TargetResource:             targetResource,
+		Steps:                      uint(steps),
+		DryRun:                     dryRun,
+		WaitForActiveTimeout:       time.Duration(waitForActiveTimeoutSeconds) * time.Second,
+		WaitForActiveCheckInterval: time.Duration(waitForActiveCheckIntervalSeconds) * time.Second,
 	}, nil
 }

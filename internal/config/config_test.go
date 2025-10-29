@@ -8,10 +8,12 @@ import (
 func TestConfigFields(t *testing.T) {
 	// Create a Config struct with all fields
 	cfg := Config{
-		CooldownDuration: 5 * time.Minute,
-		TargetResource:   "test-resource",
-		Steps:            3,
-		DryRun:           true,
+		CooldownDuration:           5 * time.Minute,
+		TargetResource:             "test-resource",
+		Steps:                      3,
+		DryRun:                     true,
+		WaitForActiveTimeout:       10 * time.Minute,
+		WaitForActiveCheckInterval: 15 * time.Second,
 	}
 
 	// Verify CooldownDuration field
@@ -33,6 +35,16 @@ func TestConfigFields(t *testing.T) {
 	if cfg.DryRun != true {
 		t.Errorf("expected DryRun true, got %t", cfg.DryRun)
 	}
+
+	// Verify WaitForActiveTimeout field
+	if cfg.WaitForActiveTimeout != 10*time.Minute {
+		t.Errorf("expected WaitForActiveTimeout 10m, got %v", cfg.WaitForActiveTimeout)
+	}
+
+	// Verify WaitForActiveCheckInterval field
+	if cfg.WaitForActiveCheckInterval != 15*time.Second {
+		t.Errorf("expected WaitForActiveCheckInterval 15s, got %v", cfg.WaitForActiveCheckInterval)
+	}
 }
 
 // The following test assumes NewConfigFromEnv is available in this package.
@@ -41,7 +53,9 @@ func TestConfigFromEnv(t *testing.T) {
 	t.Setenv("AUTOSCALER_COOLDOWN", "120")
 	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "env-resource")
 	t.Setenv("AUTOSCALER_STEPS", "5")
-	t.Setenv("DRY_RUN", "true")
+	t.Setenv("AUTOSCALER_DRY_RUN", "true")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "600")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "20")
 
 	// Call NewConfigFromEnv to load configuration
 	cfg, err := NewConfigFromEnv()
@@ -68,6 +82,16 @@ func TestConfigFromEnv(t *testing.T) {
 	if cfg.DryRun != true {
 		t.Errorf("expected DryRun true, got %t", cfg.DryRun)
 	}
+
+	// Verify WaitForActiveTimeout is correctly parsed from environment
+	if cfg.WaitForActiveTimeout != 600*time.Second {
+		t.Errorf("expected WaitForActiveTimeout 600s, got %v", cfg.WaitForActiveTimeout)
+	}
+
+	// Verify WaitForActiveCheckInterval is correctly parsed from environment
+	if cfg.WaitForActiveCheckInterval != 20*time.Second {
+		t.Errorf("expected WaitForActiveCheckInterval 20s, got %v", cfg.WaitForActiveCheckInterval)
+	}
 }
 
 func TestConfigFromEnv_Defaults(t *testing.T) {
@@ -76,7 +100,9 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 	// Explicitly unset optional environment variables to test defaults
 	t.Setenv("AUTOSCALER_COOLDOWN", "")
 	t.Setenv("AUTOSCALER_STEPS", "")
-	t.Setenv("DRY_RUN", "")
+	t.Setenv("AUTOSCALER_DRY_RUN", "")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "")
 
 	// Call NewConfigFromEnv with minimal configuration
 	cfg, err := NewConfigFromEnv()
@@ -103,6 +129,18 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 	// Verify default DryRun (false)
 	if cfg.DryRun != false {
 		t.Errorf("expected default DryRun false, got %t", cfg.DryRun)
+	}
+
+	// Verify default WaitForActiveTimeout (15 minutes)
+	expectedWaitTimeout := 900 * time.Second // 15 minutes default
+	if cfg.WaitForActiveTimeout != expectedWaitTimeout {
+		t.Errorf("expected default WaitForActiveTimeout %v, got %v", expectedWaitTimeout, cfg.WaitForActiveTimeout)
+	}
+
+	// Verify default WaitForActiveCheckInterval (30 seconds)
+	expectedCheckInterval := 30 * time.Second // 30 seconds default
+	if cfg.WaitForActiveCheckInterval != expectedCheckInterval {
+		t.Errorf("expected default WaitForActiveCheckInterval %v, got %v", expectedCheckInterval, cfg.WaitForActiveCheckInterval)
 	}
 }
 
