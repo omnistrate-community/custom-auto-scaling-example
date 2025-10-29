@@ -294,7 +294,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
             border: 2px solid #00ff00;
             padding: 20px;
             margin: 20px 0;
-            min-height: 150px;
+            min-height: 350px;
             font-size: 20px;
         }
         
