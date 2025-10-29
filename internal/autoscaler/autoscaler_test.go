@@ -70,9 +70,11 @@ func TestScaleToTarget_ScaleUp(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	
-	// First iteration: waitForActiveState returns current capacity of 2
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
+
+	// First iteration: waitForActiveState returns ACTIVE immediately
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
+
 	// Mock the first AddCapacity call
 	expectedInstance := omnistrate_api.ResourceInstance{
 		InstanceID:    "test-instance",
@@ -85,6 +87,7 @@ func TestScaleToTarget_ScaleUp(t *testing.T) {
 	intermediateCapacity := currentCapacity
 	intermediateCapacity.CurrentCapacity = 3
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(intermediateCapacity, nil).Once()
+
 	// Mock the second AddCapacity call
 	mockClient.On("AddCapacity", ctx, "test-resource", uint(1)).Return(expectedInstance, nil).Once()
 
