@@ -35,13 +35,6 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) error {
 	logger.Info().Int("targetCapacity", targetCapacity).Msg("Scaling to target capacity")
 
-	// Check if we're within cooldown period
-	if !a.lastActionTime.IsZero() && time.Since(a.lastActionTime) < a.config.CooldownDuration {
-		waitTime := a.config.CooldownDuration - time.Since(a.lastActionTime)
-		logger.Info().Dur("waitTime", waitTime).Msg("Within cooldown period, waiting before scaling")
-		time.Sleep(waitTime)
-	}
-
 	// Get current capacity
 	currentCapacity, err := a.getCurrentCapacity(ctx)
 	if err != nil {
@@ -59,26 +52,48 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 		return nil
 	}
 
-	// Wait for instance to be in ACTIVE state
-	err = a.waitForActiveState(ctx)
+	for currentCapacity.CurrentCapacity != targetCapacity {
+		// Check if we're within cooldown period
+		if !a.lastActionTime.IsZero() && time.Since(a.lastActionTime) < a.config.CooldownDuration {
+			waitTime := a.config.CooldownDuration - time.Since(a.lastActionTime)
+			logger.Info().Dur("waitTime", waitTime).Msg("Within cooldown period, waiting before scaling")
+			time.Sleep(waitTime)
+		}
+
+		// Wait for instance to be in ACTIVE state
+		currentCapacity, err = a.waitForActiveState(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to wait for active state: %w", err)
+		}
+		logger.Info().
+			Int("currentCapacity", currentCapacity.CurrentCapacity).
+			Int("targetCapacity", targetCapacity).
+			Msg("Current and target capacity")
+
+		// Perform scaling operation
+		if currentCapacity.CurrentCapacity < targetCapacity {
+			err = a.scaleUp(ctx, currentCapacity.CurrentCapacity)
+		} else {
+			err = a.scaleDown(ctx, currentCapacity.CurrentCapacity)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to scale: %w", err)
+		}
+
+		// Update last action time
+		a.lastActionTime = time.Now()
+	}
+
+	// Final wait for instance to be in ACTIVE state
+	currentCapacity, err = a.waitForActiveState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to wait for active state: %w", err)
+		return fmt.Errorf("failed to wait for active state after scaling: %w", err)
 	}
 
-	// Perform scaling operation
-	if currentCapacity.CurrentCapacity < targetCapacity {
-		err = a.scaleUp(ctx)
-	} else {
-		err = a.scaleDown(ctx)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to scale: %w", err)
-	}
-
-	// Update last action time
-	a.lastActionTime = time.Now()
-	logger.Info().Msg("Scaling operation completed successfully")
+	logger.Info().
+		Int("currentCapacity", currentCapacity.CurrentCapacity).
+		Msg("Scaling operation completed successfully")
 
 	return nil
 }
@@ -93,7 +108,7 @@ func (a *Autoscaler) getCurrentCapacity(ctx context.Context) (*omnistrate_api.Re
 }
 
 // waitForActiveState waits for the instance to be in ACTIVE state
-func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
+func (a *Autoscaler) waitForActiveState(ctx context.Context) (*omnistrate_api.ResourceInstanceCapacity, error) {
 	logger.Info().Msg("Waiting for instance to be in ACTIVE state")
 
 	maxWaitTime := 10 * time.Minute
@@ -105,9 +120,9 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-timeout:
-			return fmt.Errorf("timeout waiting for instance to become ACTIVE")
+			return nil, fmt.Errorf("timeout waiting for instance to become ACTIVE")
 		case <-ticker.C:
 			capacity, err := a.getCurrentCapacity(ctx)
 			if err != nil {
@@ -118,11 +133,11 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 			logger.Debug().Str("status", string(capacity.Status)).Msg("Current instance status")
 			if capacity.Status == omnistrate_api.ACTIVE {
 				logger.Info().Msg("Instance is now ACTIVE")
-				return nil
+				return capacity, nil
 			}
 
 			if capacity.Status == omnistrate_api.FAILED {
-				return fmt.Errorf("instance is in FAILED state")
+				return nil, fmt.Errorf("instance is in FAILED state")
 			}
 
 			logger.Debug().Str("status", string(capacity.Status)).Msg("Instance status is not ACTIVE, waiting")
@@ -131,8 +146,11 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) error {
 }
 
 // scaleUp adds capacity to the resource
-func (a *Autoscaler) scaleUp(ctx context.Context) error {
-	logger.Info().Uint("increaseBy", a.config.Steps).Msg("Scaling up instances")
+func (a *Autoscaler) scaleUp(ctx context.Context, currentCapacity int) error {
+	logger.Info().
+		Int("currentCapacity", currentCapacity).
+		Uint("increaseBy", a.config.Steps).
+		Msg("Scaling up instances")
 	_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
 	if err != nil {
 		return fmt.Errorf("failed to add capacity: %w", err)
@@ -143,8 +161,16 @@ func (a *Autoscaler) scaleUp(ctx context.Context) error {
 }
 
 // scaleDown removes capacity from the resource
-func (a *Autoscaler) scaleDown(ctx context.Context) error {
-	logger.Info().Uint("decreaseBy", a.config.Steps).Msg("Scaling down instances")
+func (a *Autoscaler) scaleDown(ctx context.Context, currentCapacity int) error {
+	// Ensure we do not remove more capacity than currently exists
+	removedCapacity := a.config.Steps
+	if currentCapacity <= int(removedCapacity) {
+		removedCapacity = uint(currentCapacity)
+	}
+	logger.Info().
+		Int("currentCapacity", currentCapacity).
+		Uint("decreaseBy", removedCapacity).
+		Msg("Scaling down instances")
 	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
 	if err != nil {
 		return fmt.Errorf("failed to remove capacity: %w", err)
