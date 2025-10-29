@@ -60,7 +60,12 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 			Error:   fmt.Sprintf("Invalid JSON: %v", err),
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to encode JSON response")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -71,7 +76,12 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 			Error:   "Target capacity must be non-negative",
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to encode JSON response")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -113,7 +123,12 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
-			json.NewEncoder(w).Encode(response)
+			err := json.NewEncoder(w).Encode(response)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Failed to encode JSON response")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		} else {
 			// If we can't get status, just return the error
 			response := ScaleResponse{
@@ -125,7 +140,12 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
-			json.NewEncoder(w).Encode(response)
+			err := json.NewEncoder(w).Encode(response)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Failed to encode JSON response")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 		return
 	}
@@ -135,7 +155,12 @@ func scaleHandler(w http.ResponseWriter, r *http.Request) {
 		Message: fmt.Sprintf("Successfully scaled to target capacity: %d", req.TargetCapacity),
 	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to encode JSON response")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +180,12 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 			Error:   fmt.Sprintf("Failed to get current capacity: %v", err),
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to encode JSON response")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -173,18 +203,27 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to encode JSON response")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status": "healthy", "service": "autoscaler"}`)
+	_, err := fmt.Fprintf(w, `{"status": "healthy", "service": "autoscaler"}`)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to write health response")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	config := autoScaler.GetConfig()
-	fmt.Fprintf(w, `
+	_, err := fmt.Fprintf(w, `
 <!DOCTYPE html>
 <html>
 <head>
@@ -612,6 +651,11 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `, config.TargetResource, config.CooldownDuration)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to write HTML response")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 /**
