@@ -21,7 +21,7 @@ func createTestAutoscaler(client omnistrate_api.Client) *Autoscaler {
 	os.Setenv("AUTOSCALER_STEPS", "1")
 	os.Setenv("AUTOSCALER_DRY_RUN", "true")
 	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
-	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "0")
+	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic
 	config, err := config.NewConfigFromEnv()
 	if err != nil {
 		panic(err)
@@ -39,7 +39,7 @@ func TestScaleToTarget_AlreadyAtTarget(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the GetCurrentCapacity call to return capacity matching target
+	// Mock the GetCurrentCapacity call in waitForActiveState to return capacity matching target
 	expectedCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -47,6 +47,7 @@ func TestScaleToTarget_AlreadyAtTarget(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 3,
 	}
+	// waitForActiveState will call GetCurrentCapacity until it gets ACTIVE status
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(expectedCapacity, nil).Once()
 
 	// Call ScaleToTarget with the same capacity
@@ -64,7 +65,7 @@ func TestScaleToTarget_ScaleUp(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return lower capacity
+	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -72,9 +73,6 @@ func TestScaleToTarget_ScaleUp(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the first AddCapacity call
@@ -113,7 +111,7 @@ func TestScaleToTarget_ScaleDown(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return higher capacity
+	// First iteration: waitForActiveState returns capacity = 5, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -121,9 +119,6 @@ func TestScaleToTarget_ScaleDown(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 5,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the first RemoveCapacity call
@@ -162,7 +157,7 @@ func TestScaleToTarget_GetCurrentCapacityError(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the GetCurrentCapacity call to return an error
+	// Mock the GetCurrentCapacity call in waitForActiveState to return an error
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(omnistrate_api.ResourceInstanceCapacity{}, errors.New("API error"))
 
 	// Call ScaleToTarget
@@ -170,7 +165,7 @@ func TestScaleToTarget_GetCurrentCapacityError(t *testing.T) {
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get current capacity")
+	assert.Contains(t, err.Error(), "timeout waiting for instance to become ACTIVE")
 	mockClient.AssertExpectations(t)
 }
 
@@ -181,18 +176,14 @@ func TestWaitForActiveState_InstanceFailed(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return lower capacity with STARTING status
-	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+	// Mock GetCurrentCapacity in waitForActiveState to return FAILED status
+	failedCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
-		Status:          omnistrate_api.STARTING,
+		Status:          omnistrate_api.FAILED,
 		ResourceID:      "test-resource-id",
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	failedCapacity := currentCapacity
-	failedCapacity.Status = omnistrate_api.FAILED
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(failedCapacity, nil).Once()
 
 	// Call ScaleToTarget
@@ -211,7 +202,7 @@ func TestScaleToTarget_AddCapacityError(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return lower capacity
+	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -219,9 +210,6 @@ func TestScaleToTarget_AddCapacityError(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// Mock waitForActiveState returning ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the AddCapacity call to return an error
@@ -244,7 +232,7 @@ func TestScaleToTarget_RemoveCapacityError(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return higher capacity
+	// First iteration: waitForActiveState returns capacity = 4, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -252,9 +240,6 @@ func TestScaleToTarget_RemoveCapacityError(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 4,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// Mock waitForActiveState returning ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the RemoveCapacity call to return an error
@@ -281,7 +266,7 @@ func TestScaleToTarget_CooldownPeriod(t *testing.T) {
 	autoscaler.config.CooldownDuration = 10 * time.Millisecond
 	autoscaler.lastActionTime = time.Now() // Set last action time to now
 
-	// Mock the initial GetCurrentCapacity call to return lower capacity
+	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -289,9 +274,6 @@ func TestScaleToTarget_CooldownPeriod(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// Mock waitForActiveState returning ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the AddCapacity call
@@ -302,7 +284,7 @@ func TestScaleToTarget_CooldownPeriod(t *testing.T) {
 	}
 	mockClient.On("AddCapacity", ctx, "test-resource", uint(1)).Return(expectedInstance, nil).Once()
 
-	// Mock waitForActiveState at next loop iteration - capacity is now 3 (target reached)
+	// Second iteration: waitForActiveState shows capacity is now 3 (target reached)
 	finalCapacity := currentCapacity
 	finalCapacity.CurrentCapacity = 3
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(finalCapacity, nil).Once()
@@ -388,7 +370,7 @@ func TestGetConfig(t *testing.T) {
 	assert.Equal(t, 0*time.Second, config.CooldownDuration) // Set to 0 via env var
 	assert.True(t, config.DryRun)
 	assert.Equal(t, 10*time.Second, config.WaitForActiveTimeout)
-	assert.Equal(t, 0*time.Second, config.WaitForActiveCheckInterval)
+	assert.Equal(t, 1*time.Second, config.WaitForActiveCheckInterval) // Config parser treats as seconds
 }
 
 func TestScaleUp_MultipleSteps(t *testing.T) {
@@ -399,7 +381,7 @@ func TestScaleUp_MultipleSteps(t *testing.T) {
 	autoscaler.config.Steps = 2 // Set steps to 2
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return lower capacity
+	// First iteration: waitForActiveState returns capacity = 1, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -407,9 +389,6 @@ func TestScaleUp_MultipleSteps(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 1,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the AddCapacity call with steps=2 (should add 2 capacity)
@@ -441,7 +420,7 @@ func TestScaleDown_MultipleSteps(t *testing.T) {
 	autoscaler.config.Steps = 2 // Set steps to 2
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return higher capacity
+	// First iteration: waitForActiveState returns capacity = 5, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -449,9 +428,6 @@ func TestScaleDown_MultipleSteps(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 5,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the RemoveCapacity call with steps=2
@@ -483,7 +459,7 @@ func TestScaleDown_LimitedByCurrentCapacity(t *testing.T) {
 	autoscaler.config.Steps = 3 // Set steps to 3, but current capacity is only 2
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return capacity of 2
+	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -491,9 +467,6 @@ func TestScaleDown_LimitedByCurrentCapacity(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 2,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the RemoveCapacity call - should only remove 2 (current capacity), not 3 (steps)
@@ -536,10 +509,7 @@ func TestWaitForActiveState_Success(t *testing.T) {
 	activeCapacity := startingCapacity
 	activeCapacity.Status = omnistrate_api.ACTIVE
 
-	// Mock the initial call returning STARTING status
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(startingCapacity, nil).Once()
-
-	// Mock waitForActiveState polling - first returns STARTING, second returns ACTIVE
+	// First iteration: waitForActiveState polls and gets STARTING, then ACTIVE
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(startingCapacity, nil).Once()
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(activeCapacity, nil).Once()
 
@@ -551,7 +521,7 @@ func TestWaitForActiveState_Success(t *testing.T) {
 	}
 	mockClient.On("AddCapacity", ctx, "test-resource", uint(1)).Return(expectedInstance, nil).Once()
 
-	// Mock waitForActiveState at next iteration - shows capacity of 3 (target reached, loop exits)
+	// Second iteration: waitForActiveState shows capacity of 3 (target reached, loop exits)
 	finalCapacity := activeCapacity
 	finalCapacity.CurrentCapacity = 3
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(finalCapacity, nil).Once()
@@ -580,8 +550,6 @@ func TestWaitForActiveState_Failed(t *testing.T) {
 		CurrentCapacity: 3,
 	}
 
-	// Mock the initial call
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(failedCapacity, nil).Once()
 	// Mock waitForActiveState polling that returns FAILED
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(failedCapacity, nil).Once()
 
@@ -601,7 +569,7 @@ func TestScaleToTarget_ScaleDownBeyondMinimum(t *testing.T) {
 	autoscaler := createTestAutoscaler(mockClient)
 	ctx := context.Background()
 
-	// Mock the initial GetCurrentCapacity call to return capacity of 1
+	// First iteration: waitForActiveState returns capacity = 1, status = ACTIVE
 	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
 		InstanceID:      "test-instance",
 		Status:          omnistrate_api.ACTIVE,
@@ -609,9 +577,6 @@ func TestScaleToTarget_ScaleDownBeyondMinimum(t *testing.T) {
 		ResourceAlias:   "test-resource",
 		CurrentCapacity: 1,
 	}
-	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
-
-	// First iteration: waitForActiveState returns ACTIVE immediately
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
 
 	// Mock the RemoveCapacity call - should only remove 1 (current capacity), not steps
