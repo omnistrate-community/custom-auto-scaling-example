@@ -171,11 +171,11 @@ func (a *Autoscaler) scaleDown(ctx context.Context, currentCapacity int) error {
 		Int("currentCapacity", currentCapacity).
 		Uint("decreaseBy", removedCapacity).
 		Msg("Scaling down instances")
-	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, a.config.Steps)
+	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, removedCapacity)
 	if err != nil {
 		return fmt.Errorf("failed to remove capacity: %w", err)
 	}
-	logger.Info().Uint("decreaseBy", a.config.Steps).Msg("Requested to remove capacity")
+	logger.Info().Uint("decreaseBy", removedCapacity).Msg("Requested to remove capacity")
 	return nil
 }
 
