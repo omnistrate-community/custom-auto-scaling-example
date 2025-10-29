@@ -70,6 +70,12 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 			Int("targetCapacity", targetCapacity).
 			Msg("Current and target capacity")
 
+		// Check again if scaling is needed
+		if currentCapacity.CurrentCapacity == targetCapacity {
+			logger.Info().Int("capacity", targetCapacity).Msg("Reached target capacity")
+			break
+		}
+
 		// Perform scaling operation
 		if currentCapacity.CurrentCapacity < targetCapacity {
 			err = a.scaleUp(ctx, currentCapacity.CurrentCapacity)
@@ -83,12 +89,6 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 
 		// Update last action time
 		a.lastActionTime = time.Now()
-	}
-
-	// Final wait for instance to be in ACTIVE state
-	currentCapacity, err = a.waitForActiveState(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to wait for active state after scaling: %w", err)
 	}
 
 	logger.Info().
