@@ -31,7 +31,7 @@ tidy:
 	go mod tidy
 
 .PHONY: download
-tidy:
+download:
 	echo "Download dependency modules"
 	go mod download
 
@@ -79,7 +79,7 @@ run:
     export DRY_RUN=true && \
     export LOG_LEVEL=debug && \
     export LOG_FORMAT=pretty && \
-	go run ${BUILD_FLAGS} ./cmd/controller.go
+	go run ./cmd/controller.go
 
 .PHONY: docker-build
 docker-build:
