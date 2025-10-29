@@ -19,7 +19,9 @@ func createTestAutoscaler(client omnistrate_api.Client) *Autoscaler {
 	os.Setenv("AUTOSCALER_COOLDOWN", "0")
 	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
 	os.Setenv("AUTOSCALER_STEPS", "1")
-	os.Setenv("DRY_RUN", "true")
+	os.Setenv("AUTOSCALER_DRY_RUN", "true")
+	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
+	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "0")
 	config, err := config.NewConfigFromEnv()
 	if err != nil {
 		panic(err)
@@ -385,6 +387,8 @@ func TestGetConfig(t *testing.T) {
 	assert.Equal(t, uint(1), config.Steps)
 	assert.Equal(t, 0*time.Second, config.CooldownDuration) // Set to 0 via env var
 	assert.True(t, config.DryRun)
+	assert.Equal(t, 10*time.Second, config.WaitForActiveTimeout)
+	assert.Equal(t, 0*time.Second, config.WaitForActiveCheckInterval)
 }
 
 func TestScaleUp_MultipleSteps(t *testing.T) {
