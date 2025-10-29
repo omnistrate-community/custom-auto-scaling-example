@@ -35,24 +35,7 @@ func NewAutoscaler(ctx context.Context) (*Autoscaler, error) {
 func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) error {
 	logger.Info().Int("targetCapacity", targetCapacity).Msg("Scaling to target capacity")
 
-	// Get current capacity
-	currentCapacity, err := a.getCurrentCapacity(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get current capacity: %w", err)
-	}
-
-	logger.Info().
-		Int("currentCapacity", currentCapacity.CurrentCapacity).
-		Int("targetCapacity", targetCapacity).
-		Msg("Current and target capacity")
-
-	// Check if scaling is needed
-	if currentCapacity.CurrentCapacity == targetCapacity {
-		logger.Info().Int("capacity", targetCapacity).Msg("Already at target capacity")
-		return nil
-	}
-
-	for currentCapacity.CurrentCapacity != targetCapacity {
+	for {
 		// Check if we're within cooldown period
 		if !a.lastActionTime.IsZero() && time.Since(a.lastActionTime) < a.config.CooldownDuration {
 			waitTime := a.config.CooldownDuration - time.Since(a.lastActionTime)
@@ -61,7 +44,7 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 		}
 
 		// Wait for instance to be in ACTIVE state
-		currentCapacity, err = a.waitForActiveState(ctx)
+		currentCapacity, err := a.waitForActiveState(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to wait for active state: %w", err)
 		}
@@ -91,10 +74,6 @@ func (a *Autoscaler) ScaleToTarget(ctx context.Context, targetCapacity int) erro
 		a.lastActionTime = time.Now()
 	}
 
-	logger.Info().
-		Int("currentCapacity", currentCapacity.CurrentCapacity).
-		Msg("Scaling operation completed successfully")
-
 	return nil
 }
 
@@ -111,6 +90,22 @@ func (a *Autoscaler) getCurrentCapacity(ctx context.Context) (*omnistrate_api.Re
 func (a *Autoscaler) waitForActiveState(ctx context.Context) (*omnistrate_api.ResourceInstanceCapacity, error) {
 	logger.Info().Msg("Waiting for instance to be in ACTIVE state")
 
+	capacity, err := a.getCurrentCapacity(ctx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Error checking instance status")
+		return nil, err
+	}
+	logger.Debug().Str("status", string(capacity.Status)).Msg("Current instance status")
+	if capacity.Status == omnistrate_api.ACTIVE {
+		logger.Info().Msg("Instance is now ACTIVE")
+		return capacity, nil
+	}
+	if capacity.Status == omnistrate_api.FAILED {
+		return nil, fmt.Errorf("instance is in FAILED state")
+	}
+
+	logger.Debug().Str("status", string(capacity.Status)).Msg("Instance status is not ACTIVE, waiting")
+
 	maxWaitTime := 10 * time.Minute
 	checkInterval := 30 * time.Second
 	timeout := time.After(maxWaitTime)
@@ -124,7 +119,7 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) (*omnistrate_api.Re
 		case <-timeout:
 			return nil, fmt.Errorf("timeout waiting for instance to become ACTIVE")
 		case <-ticker.C:
-			capacity, err := a.getCurrentCapacity(ctx)
+			capacity, err = a.getCurrentCapacity(ctx)
 			if err != nil {
 				logger.Warn().Err(err).Msg("Error checking instance status")
 				continue
