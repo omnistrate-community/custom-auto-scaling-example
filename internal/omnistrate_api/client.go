@@ -110,10 +110,15 @@ func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string, capa
 		}, nil
 	}
 
-	reqBody := map[string]float64{
+	reqBody := map[string]interface{}{
 		capacityToBeAddedField: float64(capacityToBeAdded),
 	}
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(addCapacityURL, resourceAlias), reqBody)
+	reqBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		err = errors.Wrapf(err, "Failed marshal request body when adding capacity for resourceAlias: %s", resourceAlias)
+		return
+	}
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(addCapacityURL, resourceAlias), reqBytes)
 	if err != nil {
 		return
 	}
@@ -158,10 +163,15 @@ func (c *ClientImpl) RemoveCapacity(ctx context.Context, resourceAlias string, c
 		}, nil
 	}
 
-	reqBody := map[string]float64{
+	reqBody := map[string]interface{}{
 		capacityToBeRemovedField: float64(capacityToBeRemoved),
 	}
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(removeCapacityURL, resourceAlias), reqBody)
+	reqBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		err = errors.Wrapf(err, "Failed marshal request body when removing capacity for resourceAlias: %s", resourceAlias)
+		return
+	}
+	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(removeCapacityURL, resourceAlias), reqBytes)
 	if err != nil {
 		err = errors.Wrapf(err, "Failed to create remove capacity request for resourceAlias: %s", resourceAlias)
 		return

@@ -4,9 +4,9 @@ TESTCOVERAGE_THRESHOLD=0
 # Build info
 CGO_ENABLED=0
 
-SERVICE_NAME=service-test
-SERVICE_PLAN=service-test
-MAIN_RESOURCE_NAME=web
+SERVICE_NAME=custom-auto-scaling
+SERVICE_PLAN=custom-auto-scaling
+MAIN_RESOURCE_NAME=controller
 ENVIRONMENT=Dev
 AWS_CLOUD_PROVIDER=aws
 AWS_REGION=ap-south-1
