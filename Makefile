@@ -85,6 +85,10 @@ run:
 docker-build:
 	docker buildx build --platform=${DOCKER_PLATFORM} -f ./build/Dockerfile -t custom-auto-scalling-controller:latest . 
 
+.PHONY: docker-run
+docker-run: docker-build
+	docker run -e DRY_RUN=true -e LOG_LEVEL=debug -e LOG_FORMAT=pretty --rm -it custom-auto-scalling-controller:latest
+
 .PHONY: install-ctl
 install-ctl:
 	@brew tap omnistrate/tap

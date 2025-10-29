@@ -25,18 +25,15 @@ RUN echo Building and installing the controller service
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build  \
-      -o /go/bin/controller /go/src/controller
+      -o /go/bin/controller ./cmd/controller.go
 
-RUN ls -lrt /go/bin/proxyd
+RUN ls -lrt /go/bin/controller
 
 # Stage 2: Run
 FROM alpine:latest AS final
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends netcat-openbsd ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
+    apk add --no-cache netcat-openbsd ca-certificates
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /go/bin/controller /bin/controller
