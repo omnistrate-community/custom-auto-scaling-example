@@ -3,7 +3,6 @@ package autoscaler
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -17,18 +16,12 @@ import (
 
 func createTestAutoscaler(t *testing.T, client omnistrate_api.Client) *Autoscaler {
 	// Set required env vars for config
-	err := os.Setenv("AUTOSCALER_COOLDOWN", "0")
-	require.NoError(t, err)
-	err = os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	require.NoError(t, err)
-	err = os.Setenv("AUTOSCALER_STEPS", "1")
-	require.NoError(t, err)
-	err = os.Setenv("DRY_RUN", "true")
-	require.NoError(t, err)
-	err = os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
-	require.NoError(t, err)
-	err = os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic
-	require.NoError(t, err)
+	t.Setenv("AUTOSCALER_COOLDOWN", "0")
+	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
+	t.Setenv("AUTOSCALER_STEPS", "1")
+	t.Setenv("DRY_RUN", "true")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic on 0 interval
 	config, err := config.NewConfigFromEnv()
 	if err != nil {
 		require.NoError(t, err)
@@ -661,7 +654,8 @@ func TestGetStatus_DuringScaling(t *testing.T) {
 
 	// Start scaling in goroutine
 	go func() {
-		autoscaler.ScaleToTarget(ctx, 3)
+		err := autoscaler.ScaleToTarget(ctx, 3)
+		assert.NoError(t, err)
 	}()
 
 	// Give it time to start
@@ -680,12 +674,12 @@ func TestGetStatus_DuringScaling(t *testing.T) {
 func TestGetStatus_WithCooldown(t *testing.T) {
 	mockClient := new(MockClient)
 	// Create autoscaler with 5 second cooldown
-	os.Setenv("AUTOSCALER_COOLDOWN", "5")
-	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	os.Setenv("AUTOSCALER_STEPS", "1")
-	os.Setenv("DRY_RUN", "true")
-	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
-	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1")
+	t.Setenv("AUTOSCALER_COOLDOWN", "5")
+	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
+	t.Setenv("AUTOSCALER_STEPS", "1")
+	t.Setenv("DRY_RUN", "true")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
+	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1")
 	config, _ := config.NewConfigFromEnv()
 	autoscaler := &Autoscaler{
 		config:         config,
