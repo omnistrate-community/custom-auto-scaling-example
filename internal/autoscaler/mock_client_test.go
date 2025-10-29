@@ -9,6 +9,7 @@ import (
 
 // MockClient is a mock implementation of the omnistrate_api.Client interface
 type MockClient struct {
+	omnistrate_api.Client
 	mock.Mock
 }
 
