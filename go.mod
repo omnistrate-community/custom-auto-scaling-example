@@ -3,9 +3,11 @@ module github.com/omnistrate-community/custom-auto-scaling-example
 go 1.25
 
 require (
+	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/pkg/errors v0.9.1
+	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -19,7 +21,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	golang.org/x/sys v0.20.0 // indirect

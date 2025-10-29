@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/config"
 	"github.com/pkg/errors"
@@ -52,8 +53,12 @@ func NewClient(config *config.Config) Client {
 func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias string) (resp ResourceInstanceCapacity, err error) {
 	if c.config.DryRun {
 		return ResourceInstanceCapacity{
-			ResourceAlias:   resourceAlias,
-			CurrentCapacity: 10,
+			InstanceID:            "instance-abc",
+			ResourceID:            "resource-abc",
+			ResourceAlias:         resourceAlias,
+			Status:                ACTIVE,
+			CurrentCapacity:       10,
+			LastObservedTimestamp: strfmt.DateTime(time.Now().UTC()),
 		}, nil
 	}
 
@@ -91,12 +96,16 @@ func (c *ClientImpl) GetCurrentCapacity(ctx context.Context, resourceAlias strin
 func (c *ClientImpl) AddCapacity(ctx context.Context, resourceAlias string, capacityToBeAdded uint) (resp ResourceInstance, err error) {
 	if c.config.DryRun {
 		return ResourceInstance{
+			InstanceID:    "instance-abc",
+			ResourceID:    "resource-abc",
 			ResourceAlias: resourceAlias,
 		}, nil
 	}
 
 	if capacityToBeAdded == 0 {
 		return ResourceInstance{
+			InstanceID:    "instance-abc",
+			ResourceID:    "resource-abc",
 			ResourceAlias: resourceAlias,
 		}, nil
 	}

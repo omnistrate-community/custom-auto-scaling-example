@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v4/testutils/require"
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/config"
 	"github.com/omnistrate-community/custom-auto-scaling-example/internal/omnistrate_api"
 	"github.com/stretchr/testify/assert"
@@ -14,17 +15,23 @@ import (
 
 // Helper function to create a test autoscaler with mocked client
 
-func createTestAutoscaler(client omnistrate_api.Client) *Autoscaler {
+func createTestAutoscaler(t *testing.T, client omnistrate_api.Client) *Autoscaler {
 	// Set required env vars for config
-	os.Setenv("AUTOSCALER_COOLDOWN", "0")
-	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	os.Setenv("AUTOSCALER_STEPS", "1")
-	os.Setenv("DRY_RUN", "true")
-	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
-	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic
+	err := os.Setenv("AUTOSCALER_COOLDOWN", "0")
+	require.NoError(t, err)
+	err = os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
+	require.NoError(t, err)
+	err = os.Setenv("AUTOSCALER_STEPS", "1")
+	require.NoError(t, err)
+	err = os.Setenv("DRY_RUN", "true")
+	require.NoError(t, err)
+	err = os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
+	require.NoError(t, err)
+	err = os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic
+	require.NoError(t, err)
 	config, err := config.NewConfigFromEnv()
 	if err != nil {
-		panic(err)
+		require.NoError(t, err)
 	}
 	return &Autoscaler{
 		config: config,
@@ -33,10 +40,8 @@ func createTestAutoscaler(client omnistrate_api.Client) *Autoscaler {
 }
 
 func TestScaleToTarget_AlreadyAtTarget(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock the GetCurrentCapacity call in waitForActiveState to return capacity matching target
@@ -59,10 +64,8 @@ func TestScaleToTarget_AlreadyAtTarget(t *testing.T) {
 }
 
 func TestScaleToTarget_ScaleUp(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
@@ -105,10 +108,8 @@ func TestScaleToTarget_ScaleUp(t *testing.T) {
 }
 
 func TestScaleToTarget_ScaleDown(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// First iteration: waitForActiveState returns capacity = 5, status = ACTIVE
@@ -151,10 +152,8 @@ func TestScaleToTarget_ScaleDown(t *testing.T) {
 }
 
 func TestScaleToTarget_GetCurrentCapacityError(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock the GetCurrentCapacity call in waitForActiveState to return an error
@@ -170,10 +169,8 @@ func TestScaleToTarget_GetCurrentCapacityError(t *testing.T) {
 }
 
 func TestWaitForActiveState_InstanceFailed(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock GetCurrentCapacity in waitForActiveState to return FAILED status
@@ -196,10 +193,8 @@ func TestWaitForActiveState_InstanceFailed(t *testing.T) {
 }
 
 func TestScaleToTarget_AddCapacityError(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// First iteration: waitForActiveState returns capacity = 2, status = ACTIVE
@@ -226,10 +221,8 @@ func TestScaleToTarget_AddCapacityError(t *testing.T) {
 }
 
 func TestScaleToTarget_RemoveCapacityError(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// First iteration: waitForActiveState returns capacity = 4, status = ACTIVE
@@ -256,10 +249,8 @@ func TestScaleToTarget_RemoveCapacityError(t *testing.T) {
 }
 
 func TestScaleToTarget_CooldownPeriod(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Set a very short cooldown for testing
@@ -305,11 +296,9 @@ func TestScaleToTarget_CooldownPeriod(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
-func TestGetCurrentCapacity(t *testing.T) {
-	t.Parallel()
-
+func TestGetStatus(t *testing.T) {
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock the GetCurrentCapacity call
@@ -322,43 +311,41 @@ func TestGetCurrentCapacity(t *testing.T) {
 	}
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(expectedCapacity, nil)
 
-	// Call GetCurrentCapacity
-	capacity, err := autoscaler.GetCurrentCapacity(ctx)
+	// Call GetStatus
+	status, err := autoscaler.GetStatus(ctx)
 
 	// Assertions
 	assert.NoError(t, err)
-	assert.NotNil(t, capacity)
-	assert.Equal(t, expectedCapacity.InstanceID, capacity.InstanceID)
-	assert.Equal(t, expectedCapacity.Status, capacity.Status)
-	assert.Equal(t, expectedCapacity.CurrentCapacity, capacity.CurrentCapacity)
+	assert.NotNil(t, status)
+	assert.Equal(t, expectedCapacity.CurrentCapacity, status.CurrentCapacity)
+	assert.Equal(t, expectedCapacity.Status, status.Status)
+	assert.False(t, status.ScalingInProgress)
+	assert.Equal(t, 0, status.TargetCapacity)
+	assert.False(t, status.InCooldownPeriod)
 	mockClient.AssertExpectations(t)
 }
 
-func TestGetCurrentCapacity_Error(t *testing.T) {
-	t.Parallel()
-
+func TestGetStatus_Error(t *testing.T) {
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock the GetCurrentCapacity call to return an error
 	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(omnistrate_api.ResourceInstanceCapacity{}, errors.New("API error"))
 
-	// Call GetCurrentCapacity
-	capacity, err := autoscaler.GetCurrentCapacity(ctx)
+	// Call GetStatus
+	status, err := autoscaler.GetStatus(ctx)
 
 	// Assertions
 	assert.Error(t, err)
-	assert.Nil(t, capacity)
+	assert.Nil(t, status)
 	assert.Contains(t, err.Error(), "API error")
 	mockClient.AssertExpectations(t)
 }
 
 func TestGetConfig(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 
 	// Call GetConfig
 	config := autoscaler.GetConfig()
@@ -374,10 +361,8 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestScaleUp_MultipleSteps(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	autoscaler.config.Steps = 2 // Set steps to 2
 	ctx := context.Background()
 
@@ -413,10 +398,8 @@ func TestScaleUp_MultipleSteps(t *testing.T) {
 }
 
 func TestScaleDown_MultipleSteps(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	autoscaler.config.Steps = 2 // Set steps to 2
 	ctx := context.Background()
 
@@ -452,10 +435,8 @@ func TestScaleDown_MultipleSteps(t *testing.T) {
 }
 
 func TestScaleDown_LimitedByCurrentCapacity(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	autoscaler.config.Steps = 3 // Set steps to 3, but current capacity is only 2
 	ctx := context.Background()
 
@@ -491,10 +472,8 @@ func TestScaleDown_LimitedByCurrentCapacity(t *testing.T) {
 }
 
 func TestWaitForActiveState_Success(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock instance with STARTING status first
@@ -535,10 +514,8 @@ func TestWaitForActiveState_Success(t *testing.T) {
 }
 
 func TestWaitForActiveState_Failed(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// Mock instance with FAILED status
@@ -563,10 +540,8 @@ func TestWaitForActiveState_Failed(t *testing.T) {
 }
 
 func TestScaleToTarget_ScaleDownBeyondMinimum(t *testing.T) {
-	t.Parallel()
-
 	mockClient := new(MockClient)
-	autoscaler := createTestAutoscaler(mockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
 	ctx := context.Background()
 
 	// First iteration: waitForActiveState returns capacity = 1, status = ACTIVE
@@ -597,5 +572,146 @@ func TestScaleToTarget_ScaleDownBeyondMinimum(t *testing.T) {
 
 	// Assertions
 	assert.NoError(t, err)
+	mockClient.AssertExpectations(t)
+}
+
+func TestScaleToTarget_ConcurrentRequestBlocked(t *testing.T) {
+	mockClient := new(MockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
+	ctx := context.Background()
+
+	// Mock first scaling operation
+	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+		InstanceID:      "test-instance",
+		Status:          omnistrate_api.ACTIVE,
+		ResourceID:      "test-resource-id",
+		ResourceAlias:   "test-resource",
+		CurrentCapacity: 1,
+	}
+
+	// First call to waitForActiveState in the first scaling operation
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
+
+	// Mock AddCapacity call
+	expectedInstance := omnistrate_api.ResourceInstance{
+		InstanceID:    "test-instance",
+		ResourceID:    "test-resource-id",
+		ResourceAlias: "test-resource",
+	}
+	mockClient.On("AddCapacity", ctx, "test-resource", uint(1)).Return(expectedInstance, nil).Once()
+
+	// Second call to waitForActiveState - simulate long operation by returning capacity not yet at target
+	startingCapacity := currentCapacity
+	startingCapacity.Status = omnistrate_api.STARTING
+	startingCapacity.CurrentCapacity = 1
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(startingCapacity, nil).Times(100)
+
+	// Eventually return target reached
+	finalCapacity := currentCapacity
+	finalCapacity.CurrentCapacity = 2
+	finalCapacity.Status = omnistrate_api.ACTIVE
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(finalCapacity, nil).Maybe()
+
+	// Start first scaling operation in goroutine
+	errChan1 := make(chan error, 1)
+	go func() {
+		errChan1 <- autoscaler.ScaleToTarget(ctx, 2)
+	}()
+
+	// Give first operation time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Try to start second scaling operation - should fail immediately
+	err := autoscaler.ScaleToTarget(ctx, 3)
+
+	// Assertions
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "scaling operation already in progress")
+
+	// Wait for first operation to complete (or timeout)
+	select {
+	case <-errChan1:
+		// First operation completed
+	case <-time.After(2 * time.Second):
+		// Timeout - that's okay for this test
+	}
+}
+
+func TestGetStatus_DuringScaling(t *testing.T) {
+	mockClient := new(MockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
+	ctx := context.Background()
+
+	// Mock scaling operation in progress
+	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+		InstanceID:      "test-instance",
+		Status:          omnistrate_api.STARTING,
+		ResourceID:      "test-resource-id",
+		ResourceAlias:   "test-resource",
+		CurrentCapacity: 1,
+	}
+
+	// Start scaling operation in background
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Maybe()
+	mockClient.On("AddCapacity", ctx, "test-resource", uint(1)).Return(omnistrate_api.ResourceInstance{
+		InstanceID:    "test-instance",
+		ResourceID:    "test-resource-id",
+		ResourceAlias: "test-resource",
+	}, nil).Maybe()
+
+	// Start scaling in goroutine
+	go func() {
+		autoscaler.ScaleToTarget(ctx, 3)
+	}()
+
+	// Give it time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Check status while scaling
+	status, err := autoscaler.GetStatus(ctx)
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.NotNil(t, status)
+	assert.True(t, status.ScalingInProgress)
+	assert.Equal(t, 3, status.TargetCapacity)
+}
+
+func TestGetStatus_WithCooldown(t *testing.T) {
+	mockClient := new(MockClient)
+	// Create autoscaler with 5 second cooldown
+	os.Setenv("AUTOSCALER_COOLDOWN", "5")
+	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
+	os.Setenv("AUTOSCALER_STEPS", "1")
+	os.Setenv("DRY_RUN", "true")
+	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
+	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1")
+	config, _ := config.NewConfigFromEnv()
+	autoscaler := &Autoscaler{
+		config:         config,
+		client:         mockClient,
+		lastActionTime: time.Now().Add(-3 * time.Second), // 3 seconds ago
+	}
+	ctx := context.Background()
+
+	// Mock GetCurrentCapacity
+	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+		InstanceID:      "test-instance",
+		Status:          omnistrate_api.ACTIVE,
+		ResourceID:      "test-resource-id",
+		ResourceAlias:   "test-resource",
+		CurrentCapacity: 2,
+	}
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil)
+
+	// Check status
+	status, err := autoscaler.GetStatus(ctx)
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.NotNil(t, status)
+	assert.True(t, status.InCooldownPeriod)
+	assert.Greater(t, status.CooldownRemaining, time.Duration(0))
+	assert.Less(t, status.CooldownRemaining, 5*time.Second)
 	mockClient.AssertExpectations(t)
 }
