@@ -79,6 +79,7 @@ run:
     export DRY_RUN=true && \
     export LOG_LEVEL=debug && \
     export LOG_FORMAT=pretty && \
+	export AUTOSCALER_TARGET_RESOURCE="custom-auto-scaling-example" && \
 	go run ./cmd/controller.go
 
 .PHONY: docker-build
@@ -87,7 +88,7 @@ docker-build:
 
 .PHONY: docker-run
 docker-run: docker-build
-	docker run -e DRY_RUN=true -e LOG_LEVEL=debug -e LOG_FORMAT=pretty --rm -it custom-auto-scalling-controller:latest
+	docker run -e DRY_RUN=true -e LOG_LEVEL=debug -e LOG_FORMAT=pretty -e AUTOSCALER_TARGET_RESOURCE="custom-auto-scaling-example" --rm -it custom-auto-scalling-controller:latest
 
 .PHONY: install-ctl
 install-ctl:

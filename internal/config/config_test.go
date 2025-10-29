@@ -53,7 +53,7 @@ func TestConfigFromEnv(t *testing.T) {
 	t.Setenv("AUTOSCALER_COOLDOWN", "120")
 	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "env-resource")
 	t.Setenv("AUTOSCALER_STEPS", "5")
-	t.Setenv("AUTOSCALER_DRY_RUN", "true")
+	t.Setenv("DRY_RUN", "true")
 	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "600")
 	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "20")
 
@@ -100,7 +100,7 @@ func TestConfigFromEnv_Defaults(t *testing.T) {
 	// Explicitly unset optional environment variables to test defaults
 	t.Setenv("AUTOSCALER_COOLDOWN", "")
 	t.Setenv("AUTOSCALER_STEPS", "")
-	t.Setenv("AUTOSCALER_DRY_RUN", "")
+	t.Setenv("DRY_RUN", "")
 	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "")
 	t.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "")
 
@@ -189,7 +189,7 @@ func TestConfigFromEnv_InvalidSteps(t *testing.T) {
 func TestConfigFromEnv_DryRunTrue(t *testing.T) {
 	// Set up environment with DRY_RUN=true
 	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	t.Setenv("AUTOSCALER_DRY_RUN", "true")
+	t.Setenv("DRY_RUN", "true")
 
 	// Call NewConfigFromEnv to load configuration
 	cfg, err := NewConfigFromEnv()
@@ -206,7 +206,7 @@ func TestConfigFromEnv_DryRunTrue(t *testing.T) {
 func TestConfigFromEnv_DryRunFalse(t *testing.T) {
 	// Set up environment with DRY_RUN=false
 	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	t.Setenv("AUTOSCALER_DRY_RUN", "false")
+	t.Setenv("DRY_RUN", "false")
 
 	// Call NewConfigFromEnv to load configuration
 	cfg, err := NewConfigFromEnv()
@@ -242,7 +242,7 @@ func TestConfigFromEnv_DryRunVariations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set up environment
 			t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-			t.Setenv("AUTOSCALER_DRY_RUN", tc.value)
+			t.Setenv("DRY_RUN", tc.value)
 
 			// Call NewConfigFromEnv to load configuration
 			cfg, err := NewConfigFromEnv()
@@ -261,7 +261,7 @@ func TestConfigFromEnv_DryRunVariations(t *testing.T) {
 func TestConfigFromEnv_InvalidDryRun(t *testing.T) {
 	// Set up environment with invalid DRY_RUN value
 	t.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
-	t.Setenv("AUTOSCALER_DRY_RUN", "invalid")
+	t.Setenv("DRY_RUN", "invalid")
 
 	// Call NewConfigFromEnv and expect an error
 	_, err := NewConfigFromEnv()

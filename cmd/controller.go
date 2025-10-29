@@ -215,7 +215,7 @@ func main() {
 	signal.Notify(chExit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start HTTP server in goroutine
-	port := "8080"
+	port := "3000"
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		port = envPort
 	}
@@ -230,8 +230,9 @@ func main() {
 	go func() {
 		logger.Info().Str("port", port).Msg("Starting autoscaler controller")
 		logger.Info().Msg("Environment variables required:")
-		logger.Info().Msg("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds")
 		logger.Info().Msg("  - AUTOSCALER_TARGET_RESOURCE: Resource alias to scale")
+		logger.Info().Msg("  - AUTOSCALER_COOLDOWN: Cooldown period in seconds (optional)")
+		logger.Info().Msg("  - AUTOSCALER_STEPS: Number of steps for scaling (optional)")
 		logger.Info().Msg("")
 		logger.Info().Msg("Available endpoints:")
 		logger.Info().Msg("  POST /scale - Scale to target capacity")

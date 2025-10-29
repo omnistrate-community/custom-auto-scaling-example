@@ -19,7 +19,7 @@ func createTestAutoscaler(client omnistrate_api.Client) *Autoscaler {
 	os.Setenv("AUTOSCALER_COOLDOWN", "0")
 	os.Setenv("AUTOSCALER_TARGET_RESOURCE", "test-resource")
 	os.Setenv("AUTOSCALER_STEPS", "1")
-	os.Setenv("AUTOSCALER_DRY_RUN", "true")
+	os.Setenv("DRY_RUN", "true")
 	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT", "10")
 	os.Setenv("AUTOSCALER_WAIT_FOR_ACTIVE_CHECK_INTERVAL", "1") // Set to 1ms to avoid ticker panic
 	config, err := config.NewConfigFromEnv()

@@ -45,12 +45,12 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// Get dry run flag
-	dryRunStr := os.Getenv("AUTOSCALER_DRY_RUN")
+	dryRunStr := os.Getenv("DRY_RUN")
 	dryRun := false // Default to false
 	if dryRunStr != "" {
 		dryRun, err = strconv.ParseBool(dryRunStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid AUTOSCALER_DRY_RUN value: %s", dryRunStr)
+			return nil, fmt.Errorf("invalid DRY_RUN value: %s", dryRunStr)
 		}
 	}
 
