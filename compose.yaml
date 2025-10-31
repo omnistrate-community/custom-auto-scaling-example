@@ -29,8 +29,8 @@ services:
     x-omnistrate-mode-internal: true
     x-omnistrate-capabilities:
       autoscaling:
-        policyType: metrics
+        policyType: custom
         maxReplicas: 6
-        minReplicas: 1
+        minReplicas: 0
     image: busybox:1.37.0
     command: ['sh', '-c', 'while true; do echo Working...; sleep 10; done']
