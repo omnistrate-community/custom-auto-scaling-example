@@ -229,7 +229,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 <head>
     <title>Omnistrate Autoscaler Control Panel</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
         * {
             margin: 0;
@@ -238,125 +238,118 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
         }
         
         body {
-            font-family: 'VT323', monospace;
-            background: #000;
-            color: #00ff00;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            background-image: 
-                repeating-linear-gradient(0deg, rgba(0, 255, 0, 0.03) 0px, transparent 1px, transparent 2px, rgba(0, 255, 0, 0.03) 3px),
-                linear-gradient(90deg, #000, #001a00);
-            animation: flicker 0.15s infinite;
-        }
-        
-        @keyframes flicker {
-            0%%, 100%% { opacity: 1; }
-            50%% { opacity: 0.98; }
+            padding: 20px;
         }
         
         .crt {
             position: relative;
-            padding: 40px;
+            padding: 20px;
             max-width: 900px;
             width: 100%%;
         }
         
-        .crt::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%%;
-            height: 100%%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%%, rgba(0, 0, 0, 0.25) 50%%);
-            background-size: 100%% 4px;
-            pointer-events: none;
-            z-index: 1000;
-        }
-        
         .screen {
-            background: #001a00;
-            border: 4px solid #00ff00;
-            border-radius: 8px;
-            padding: 30px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
             box-shadow: 
-                0 0 40px rgba(0, 255, 0, 0.3),
-                inset 0 0 100px rgba(0, 255, 0, 0.05);
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(0, 0, 0, 0.05);
             position: relative;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 32px;
+            position: relative;
         }
         
         h1 {
-            font-size: 48px;
-            letter-spacing: 4px;
-            margin-bottom: 10px;
-            animation: glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes glow {
-            0%%, 100%% { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
-            50%% { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00; }
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            color: #1a202c;
         }
         
         .subtitle {
-            font-size: 20px;
-            color: #00cc00;
-            letter-spacing: 2px;
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
         
         .config-box {
-            background: rgba(0, 255, 0, 0.05);
-            border: 2px solid #00ff00;
+            background: linear-gradient(135deg, #f7fafc 0%%, #edf2f7 100%%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
             padding: 20px;
             margin: 20px 0;
-            font-size: 20px;
+            font-size: 14px;
         }
         
         .config-line {
-            margin: 8px 0;
+            margin: 12px 0;
             display: flex;
             justify-content: space-between;
+            line-height: 1.6;
         }
         
-        .label { color: #00aa00; }
-        .value { color: #00ff00; font-weight: bold; }
+        .label { 
+            color: #4a5568;
+            font-weight: 500;
+        }
+        .value { 
+            color: #2d3748;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+        }
         
         .status-display {
-            background: rgba(0, 255, 0, 0.05);
-            border: 2px solid #00ff00;
-            padding: 20px;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
             margin: 20px 0;
             min-height: 350px;
-            font-size: 20px;
+            font-size: 15px;
+            color: #1a202c;
+            font-weight: 500;
         }
         
         .status-line {
-            margin: 8px 0;
+            margin: 10px 0;
+            line-height: 1.8;
+        }
+        
+        .status-line strong {
+            color: #1a202c;
+            font-weight: 700;
         }
         
         .controls {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
+            gap: 12px;
+            margin-top: 24px;
         }
         
         .control-group {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: stretch;
         }
         
         .control-group.scale-control {
             display: flex;
-            gap: 15px;
+            gap: 12px;
         }
         
         .control-group.scale-control input {
@@ -378,66 +371,79 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
         }
         
         button {
-            font-family: 'VT323', monospace;
-            font-size: 24px;
-            padding: 18px 25px;
-            background: #000;
-            color: #00ff00;
-            border: 3px solid #00ff00;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.1s;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
             white-space: nowrap;
         }
         
         button:hover {
-            background: #00ff00;
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
         }
         
         button:active {
-            transform: scale(0.98);
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
         }
         
         input[type="number"] {
-            font-family: 'VT323', monospace;
-            font-size: 24px;
-            padding: 15px;
-            background: #000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 14px 16px;
+            background: #ffffff;
+            color: #2d3748;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
             margin-bottom: 10px;
             width: 100%%;
+            transition: all 0.2s ease;
         }
         
         input[type="number"]:focus {
             outline: none;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .loading {
             display: none;
             text-align: center;
-            font-size: 24px;
-            margin: 10px 0;
-            animation: blink 1s infinite;
+            font-size: 14px;
+            margin: 16px 0;
+            color: #667eea;
+            font-weight: 500;
+            animation: pulse 1.5s ease-in-out infinite;
         }
         
-        @keyframes blink {
-            0%%, 50%% { opacity: 1; }
-            51%%, 100%% { opacity: 0; }
+        @keyframes pulse {
+            0%%, 100%% { opacity: 1; }
+            50%% { opacity: 0.5; }
         }
         
-        .error { color: #ff0000; text-shadow: 0 0 10px #ff0000; }
-        .success { color: #00ff00; text-shadow: 0 0 10px #00ff00; }
+        .error { 
+            color: #c53030;
+            font-weight: 600;
+        }
+        .success { 
+            color: #2f855a;
+            font-weight: 600;
+        }
         
         .timestamp {
-            text-align: right;
-            font-size: 18px;
-            color: #00aa00;
+            text-align: center;
+            font-size: 12px;
+            color: #718096;
             margin-top: 20px;
         }
     </style>
@@ -446,35 +452,35 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
     <div class="crt">
         <div class="screen">
             <div class="header">
-                <h1>◈ CUSTOM AUTOSCALER ◈</h1>
-                <div class="subtitle">OMNISTRATE EXAMPLE</div>
+                <h1>Custom Autoscaler</h1>
+                <div class="subtitle">Omnistrate Example</div>
             </div>
             
             <div class="config-box">
                 <div class="config-line">
-                    <span class="label">TARGET_RESOURCE:</span>
+                    <span class="label">Target Resource</span>
                     <span class="value">%s</span>
                 </div>
                 <div class="config-line">
-                    <span class="label">COOLDOWN_DURATION:</span>
+                    <span class="label">Cooldown Duration</span>
                     <span class="value">%v</span>
                 </div>
             </div>
             
             <div class="status-display" id="statusDisplay">
-                <div class="status-line">► SYSTEM READY</div>
-                <div class="status-line">► AWAITING COMMAND...</div>
+                <div class="status-line">System ready</div>
+                <div class="status-line">Waiting for command...</div>
             </div>
             
-            <div class="loading" id="loading">► PROCESSING...</div>
+            <div class="loading" id="loading">Processing...</div>
             
             <div class="controls">
                 <div class="control-group scale-control">
-                    <input type="number" id="targetCapacity" placeholder="Enter Target Capacity" min="0" value="1">
-                    <button onclick="scaleTarget()">⚡ SCALE TARGET</button>
+                    <input type="number" id="targetCapacity" placeholder="Enter target capacity" min="0" value="1">
+                    <button onclick="scaleTarget()">Scale to Target</button>
                 </div>
                 <div class="control-group status-control">
-                    <button onclick="getStatus()">📊 GET STATUS</button>
+                    <button onclick="getStatus()">Get Status</button>
                 </div>
             </div>
             
@@ -502,13 +508,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
         function displayStatus(content, isError = false) {
             const display = document.getElementById('statusDisplay');
             display.innerHTML = content;
-            if (isError) {
-                display.style.color = '#ff0000';
-                display.style.textShadow = '0 0 10px #ff0000';
-            } else {
-                display.style.color = '#00ff00';
-                display.style.textShadow = '0 0 10px #00ff00';
-            }
+            display.style.color = '#1a202c';
         }
         
         async function getStatus() {
@@ -521,24 +521,24 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
                     const isFailed = data.status === 'FAILED';
                     const statusClass = isFailed ? 'error' : 'success';
                     
-                    let statusDisplay = '<div class="status-line success">► STATUS RETRIEVED SUCCESSFULLY</div>' +
-                        '<div class="status-line">──────────────────────────────</div>';
+                    let statusDisplay = '<div class="status-line success"><strong>✓ Status Retrieved</strong></div>' +
+                        '<div class="status-line" style="margin: 16px 0; border-top: 1px solid #e2e8f0;"></div>';
                     
                     // Resource Information
-                    statusDisplay += '<div class="status-line ' + statusClass + '">Resource: ' + data.resourceAlias + '</div>';
-                    statusDisplay += '<div class="status-line ' + statusClass + '">Instance Status: ' + data.status + '</div>';
-                    statusDisplay += '<div class="status-line ' + statusClass + '">Current Capacity: ' + data.currentCapacity + '</div>';
+                    statusDisplay += '<div class="status-line ' + statusClass + '"><strong>Resource:</strong> ' + data.resourceAlias + '</div>';
+                    statusDisplay += '<div class="status-line ' + statusClass + '"><strong>Status:</strong> ' + data.status + '</div>';
+                    statusDisplay += '<div class="status-line ' + statusClass + '"><strong>Current Capacity:</strong> ' + data.currentCapacity + '</div>';
                     
                     // Only show target capacity if scaling is in progress
                     if (data.scalingInProgress) {
-                        statusDisplay += '<div class="status-line ' + statusClass + '">Target Capacity: ' + data.targetCapacity + '</div>';
-                        statusDisplay += '<div class="status-line">⚙️ Scaling in progress...</div>';
+                        statusDisplay += '<div class="status-line ' + statusClass + '"><strong>Target Capacity:</strong> ' + data.targetCapacity + '</div>';
+                        statusDisplay += '<div class="status-line" style="color: #667eea;">⚡ Scaling in progress...</div>';
                     }
                     
                     // Cooldown information
                     if (data.inCooldownPeriod) {
                         const cooldownSecs = Math.round(data.cooldownRemaining / 1000000000);
-                        statusDisplay += '<div class="status-line">🕐 Cooldown Period: ' + cooldownSecs + 's remaining</div>';
+                        statusDisplay += '<div class="status-line" style="color: #ed8936;">⏱ Cooldown period: ' + cooldownSecs + 's remaining</div>';
                     }
                     
                     // Last action time if available
@@ -549,25 +549,25 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
                         if (timeAgo >= 60) {
                             timeStr = Math.round(timeAgo / 60) + 'm ago';
                         }
-                        statusDisplay += '<div class="status-line">Last Action: ' + timeStr + '</div>';
+                        statusDisplay += '<div class="status-line"><strong>Last Action:</strong> ' + timeStr + '</div>';
                     }
                     
-                    // Technical details (collapsed)
-                    statusDisplay += '<div class="status-line">──────────────────────────────</div>';
-                    statusDisplay += '<div class="status-line" style="opacity: 0.6;">Instance ID: ' + data.instanceId + '</div>';
-                    statusDisplay += '<div class="status-line" style="opacity: 0.6;">Resource ID: ' + data.resourceId + '</div>';
+                    // Technical details
+                    statusDisplay += '<div class="status-line" style="margin: 16px 0; border-top: 1px solid #e2e8f0;"></div>';
+                    statusDisplay += '<div class="status-line" style="opacity: 0.6; font-size: 12px;"><strong>Instance ID:</strong> ' + data.instanceId + '</div>';
+                    statusDisplay += '<div class="status-line" style="opacity: 0.6; font-size: 12px;"><strong>Resource ID:</strong> ' + data.resourceId + '</div>';
                     
                     displayStatus(statusDisplay);
                 } else {
                     displayStatus(
-                        '<div class="status-line error">► ERROR</div>' +
+                        '<div class="status-line error"><strong>✗ Error</strong></div>' +
                         '<div class="status-line error">' + (data.error || 'Unknown error') + '</div>',
                         true
                     );
                 }
             } catch (error) {
                 displayStatus(
-                    '<div class="status-line error">► CONNECTION ERROR</div>' +
+                    '<div class="status-line error"><strong>✗ Connection Error</strong></div>' +
                     '<div class="status-line error">' + error.message + '</div>',
                     true
                 );
@@ -600,10 +600,10 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
                 
                 if (response.ok && data.success) {
                     displayStatus(
-                        '<div class="status-line success">► SCALING OPERATION SUCCESSFUL</div>' +
-                        '<div class="status-line">──────────────────────────────</div>' +
+                        '<div class="status-line success"><strong>✓ Scaling Successful</strong></div>' +
+                        '<div class="status-line" style="margin: 16px 0; border-top: 1px solid #e2e8f0;"></div>' +
                         '<div class="status-line">' + data.message + '</div>' +
-                        '<div class="status-line">TARGET_CAPACITY: ' + capacity + '</div>'
+                        '<div class="status-line"><strong>Target Capacity:</strong> ' + capacity + '</div>'
                     );
                 } else {
                     // If current status is included in the error response, display it first
@@ -612,22 +612,22 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
                         const isFailed = data.currentStatus.status === 'FAILED';
                         const statusClass = isFailed ? 'error' : 'success';
                         
-                        errorDisplay = '<div class="status-line ' + statusClass + '">Current Status:</div>' +
-                            '<div class="status-line ' + statusClass + '">Resource: ' + data.currentStatus.resourceAlias + '</div>' +
-                            '<div class="status-line ' + statusClass + '">Instance Status: ' + data.currentStatus.status + '</div>' +
-                            '<div class="status-line ' + statusClass + '">Current Capacity: ' + data.currentStatus.currentCapacity + '</div>' +
-                            '<div class="status-line">──────────────────────────────</div>';
+                        errorDisplay = '<div class="status-line ' + statusClass + '"><strong>Current Status:</strong></div>' +
+                            '<div class="status-line ' + statusClass + '"><strong>Resource:</strong> ' + data.currentStatus.resourceAlias + '</div>' +
+                            '<div class="status-line ' + statusClass + '"><strong>Status:</strong> ' + data.currentStatus.status + '</div>' +
+                            '<div class="status-line ' + statusClass + '"><strong>Capacity:</strong> ' + data.currentStatus.currentCapacity + '</div>' +
+                            '<div class="status-line" style="margin: 16px 0; border-top: 1px solid #e2e8f0;"></div>';
                     }
                     
                     // Add error message below status
-                    errorDisplay += '<div class="status-line error">► SCALING FAILED</div>' +
+                    errorDisplay += '<div class="status-line error"><strong>✗ Scaling Failed</strong></div>' +
                         '<div class="status-line error">' + (data.error || 'Unknown error') + '</div>';
                     
                     displayStatus(errorDisplay, false);
                 }
             } catch (error) {
                 displayStatus(
-                    '<div class="status-line error">► CONNECTION ERROR</div>' +
+                    '<div class="status-line error"><strong>✗ Connection Error</strong></div>' +
                     '<div class="status-line error">' + error.message + '</div>',
                     true
                 );
