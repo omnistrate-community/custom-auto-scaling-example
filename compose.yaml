@@ -17,7 +17,7 @@ services:
   controller:
     depends_on:
       - worker
-    image: ghcr.io/omnistrate-community/custom-auto-scaling-example:0.0.3
+    image: ghcr.io/omnistrate-community/custom-auto-scaling-example:0.0.5
     ports:
       - '3000:3000'
     environment:
