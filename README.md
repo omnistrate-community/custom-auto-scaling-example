@@ -142,6 +142,12 @@ The controller waits for the resource to be in an `ACTIVE` state before scaling:
 - If a resource is `FAILED`, the operation fails
 - Maximum wait time is configurable via `AUTOSCALER_WAIT_FOR_ACTIVE_TIMEOUT`
 
+## Example UI
+
+To allow to test the behaviour this example provides an example UI that can be used to trigger scaling operations:
+
+![Example UI](example.png)
+
 ## Troubleshooting
 
 ### Controller Cannot Connect to Sidecar
