@@ -955,6 +955,7 @@ def predictive_scaling(client, resource_alias):
 **Symptom:** Requests timeout frequently
 
 **Solution:**
+
 - Increase timeout values
 - Check network connectivity
 - Verify resource is not stuck in a transitional state
@@ -964,6 +965,7 @@ def predictive_scaling(client, resource_alias):
 **Symptom:** Resource scales up and down rapidly
 
 **Solution:**
+
 - Increase cooldown period
 - Implement hysteresis (different thresholds for scale up vs scale down)
 - Add dampening to your scaling logic
