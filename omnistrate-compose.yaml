@@ -31,6 +31,6 @@ services:
       autoscaling:
         policyType: custom
         maxReplicas: 6
-        minReplicas: 0
+        minReplicas: 1
     image: busybox:1.37.0
     command: ['sh', '-c', 'while true; do echo Working...; sleep 10; done']
