@@ -15,6 +15,7 @@ When you deploy a service on Omnistrate with custom autoscaling enabled, a local
 ### Base URL
 
 All API endpoints are accessible at:
+
 ```
 http://127.0.0.1:49750/resource/{resourceAlias}
 ```
@@ -28,6 +29,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 **Description:** Retrieves the current capacity and status information for a resource.
 
 **Response:**
+
 ```json
 {
   "instanceId": "string",
@@ -40,6 +42,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 ```
 
 **Status Values:**
+
 - `ACTIVE` - Resource is running and ready
 - `STARTING` - Resource is starting up
 - `PAUSED` - Resource is paused
@@ -53,6 +56,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 **Description:** Adds capacity units to a resource.
 
 **Request Body:**
+
 ```json
 {
   "capacityToBeAdded": 2
@@ -60,6 +64,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 ```
 
 **Response:**
+
 ```json
 {
   "instanceId": "string",
@@ -75,6 +80,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 **Description:** Removes capacity units from a resource.
 
 **Request Body:**
+
 ```json
 {
   "capacityToBeRemoved": 1
@@ -82,6 +88,7 @@ Where `{resourceAlias}` is the service key from your `omnistrate-compose.yaml` f
 ```
 
 **Response:**
+
 ```json
 {
   "instanceId": "string",
