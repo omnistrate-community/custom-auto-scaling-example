@@ -23,7 +23,7 @@ services:
     environment:
       - AUTOSCALER_COOLDOWN=300
       - AUTOSCALER_TARGET_RESOURCE=worker
-      - AUTOSCALER_STEPS=1
+      - AUTOSCALER_STEPS=10
 
   worker:
     x-omnistrate-mode-internal: true
@@ -31,6 +31,6 @@ services:
       autoscaling:
         policyType: custom
         maxReplicas: 6
-        minReplicas: 1
+        minReplicas: 0
     image: busybox:1.37.0
     command: ['sh', '-c', 'while true; do echo Working...; sleep 10; done']
