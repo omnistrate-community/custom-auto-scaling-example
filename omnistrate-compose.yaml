@@ -17,20 +17,20 @@ services:
   controller:
     depends_on:
       - worker
-    image: ghcr.io/omnistrate-community/custom-auto-scaling-example:0.0.5
+    image: ghcr.io/omnistrate-community/custom-auto-scaling-example:0.0.15
     ports:
       - '3000:3000'
     environment:
       - AUTOSCALER_COOLDOWN=300
       - AUTOSCALER_TARGET_RESOURCE=worker
-      - AUTOSCALER_STEPS=10
+      - AUTOSCALER_STEPS=1
 
   worker:
     x-omnistrate-mode-internal: true
     x-omnistrate-capabilities:
       autoscaling:
         policyType: custom
-        maxReplicas: 6
+        maxReplicas: 3
         minReplicas: 0
     image: busybox:1.37.0
     command: ['sh', '-c', 'while true; do echo Working...; sleep 10; done']
