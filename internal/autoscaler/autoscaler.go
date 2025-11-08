@@ -3,6 +3,7 @@ package autoscaler
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -166,35 +167,42 @@ func (a *Autoscaler) waitForActiveState(ctx context.Context) (*omnistrate_api.Re
 
 // scaleUp adds capacity to the resource
 func (a *Autoscaler) scaleUp(ctx context.Context, currentCapacity int) error {
+	// Ensure we do not exceed target capacity
+	steps := uint(math.Min(float64(a.config.Steps), float64(a.targetCapacity-currentCapacity)))
+	if steps <= 0 {
+		logger.Info().Msg("No scaling up needed")
+		return nil
+	}
 	logger.Info().
 		Int("currentCapacity", currentCapacity).
-		Uint("increaseBy", a.config.Steps).
+		Uint("increaseBy", steps).
 		Msg("Scaling up instances")
-	_, err := a.client.AddCapacity(ctx, a.config.TargetResource, a.config.Steps)
+	_, err := a.client.AddCapacity(ctx, a.config.TargetResource, steps)
 	if err != nil {
 		return fmt.Errorf("failed to add capacity: %w", err)
 	}
-	logger.Info().Uint("increaseBy", a.config.Steps).Msg("Requested to add capacity")
+	logger.Info().Uint("increaseBy", steps).Msg("Requested to add capacity")
 
 	return nil
 }
 
 // scaleDown removes capacity from the resource
 func (a *Autoscaler) scaleDown(ctx context.Context, currentCapacity int) error {
-	// Ensure we do not remove more capacity than currently exists
-	removedCapacity := a.config.Steps
-	if currentCapacity <= int(removedCapacity) {
-		removedCapacity = uint(currentCapacity)
+	steps := uint(math.Min(float64(a.config.Steps), float64(currentCapacity-a.targetCapacity)))
+	if steps <= 0 {
+		logger.Info().Msg("No scaling down needed")
+		return nil
 	}
+	// Ensure we do not remove more capacity than currently exists
 	logger.Info().
 		Int("currentCapacity", currentCapacity).
-		Uint("decreaseBy", removedCapacity).
+		Uint("decreaseBy", steps).
 		Msg("Scaling down instances")
-	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, removedCapacity)
+	_, err := a.client.RemoveCapacity(ctx, a.config.TargetResource, steps)
 	if err != nil {
 		return fmt.Errorf("failed to remove capacity: %w", err)
 	}
-	logger.Info().Uint("decreaseBy", removedCapacity).Msg("Requested to remove capacity")
+	logger.Info().Uint("decreaseBy", steps).Msg("Requested to remove capacity")
 	return nil
 }
 

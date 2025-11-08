@@ -315,6 +315,10 @@ func TestGetStatus(t *testing.T) {
 	assert.False(t, status.ScalingInProgress)
 	assert.Equal(t, 0, status.TargetCapacity)
 	assert.False(t, status.InCooldownPeriod)
+	// Verify new resource metadata fields
+	assert.Equal(t, expectedCapacity.InstanceID, status.InstanceID)
+	assert.Equal(t, expectedCapacity.ResourceID, status.ResourceID)
+	assert.Equal(t, expectedCapacity.ResourceAlias, status.ResourceAlias)
 	mockClient.AssertExpectations(t)
 }
 
@@ -620,6 +624,7 @@ func TestScaleToTarget_ConcurrentRequestBlocked(t *testing.T) {
 	// Assertions
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "scaling operation already in progress")
+	assert.Contains(t, err.Error(), "to target capacity: 2")
 
 	// Wait for first operation to complete (or timeout)
 	select {
@@ -669,6 +674,10 @@ func TestGetStatus_DuringScaling(t *testing.T) {
 	assert.NotNil(t, status)
 	assert.True(t, status.ScalingInProgress)
 	assert.Equal(t, 3, status.TargetCapacity)
+	// Verify resource metadata fields
+	assert.Equal(t, "test-instance", status.InstanceID)
+	assert.Equal(t, "test-resource-id", status.ResourceID)
+	assert.Equal(t, "test-resource", status.ResourceAlias)
 }
 
 func TestGetStatus_WithCooldown(t *testing.T) {
@@ -707,5 +716,79 @@ func TestGetStatus_WithCooldown(t *testing.T) {
 	assert.True(t, status.InCooldownPeriod)
 	assert.Greater(t, status.CooldownRemaining, time.Duration(0))
 	assert.Less(t, status.CooldownRemaining, 5*time.Second)
+	mockClient.AssertExpectations(t)
+}
+
+func TestScaleUp_LimitedByTargetCapacity(t *testing.T) {
+	mockClient := new(MockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
+	autoscaler.config.Steps = 5 // Set steps to 5, but target capacity only requires 2
+	ctx := context.Background()
+
+	// First iteration: waitForActiveState returns capacity = 1, status = ACTIVE
+	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+		InstanceID:      "test-instance",
+		Status:          omnistrate_api.ACTIVE,
+		ResourceID:      "test-resource-id",
+		ResourceAlias:   "test-resource",
+		CurrentCapacity: 1,
+	}
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
+
+	// Mock the AddCapacity call - should only add 2 (target - current), not 5 (steps)
+	expectedInstance := omnistrate_api.ResourceInstance{
+		InstanceID:    "test-instance",
+		ResourceID:    "test-resource-id",
+		ResourceAlias: "test-resource",
+	}
+	mockClient.On("AddCapacity", ctx, "test-resource", uint(2)).Return(expectedInstance, nil).Once()
+
+	// Second iteration: waitForActiveState shows capacity is now 3 (target reached, loop exits)
+	finalCapacity := currentCapacity
+	finalCapacity.CurrentCapacity = 3
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(finalCapacity, nil).Once()
+
+	// Call ScaleToTarget (need to scale up from 1 to 3, which is 2 steps, not 5)
+	err := autoscaler.ScaleToTarget(ctx, 3)
+
+	// Assertions
+	assert.NoError(t, err)
+	mockClient.AssertExpectations(t)
+}
+
+func TestScaleDown_LimitedByTargetCapacity(t *testing.T) {
+	mockClient := new(MockClient)
+	autoscaler := createTestAutoscaler(t, mockClient)
+	autoscaler.config.Steps = 5 // Set steps to 5, but target capacity only requires removing 2
+	ctx := context.Background()
+
+	// First iteration: waitForActiveState returns capacity = 5, status = ACTIVE
+	currentCapacity := omnistrate_api.ResourceInstanceCapacity{
+		InstanceID:      "test-instance",
+		Status:          omnistrate_api.ACTIVE,
+		ResourceID:      "test-resource-id",
+		ResourceAlias:   "test-resource",
+		CurrentCapacity: 5,
+	}
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(currentCapacity, nil).Once()
+
+	// Mock the RemoveCapacity call - should only remove 2 (current - target), not 5 (steps)
+	expectedInstance := omnistrate_api.ResourceInstance{
+		InstanceID:    "test-instance",
+		ResourceID:    "test-resource-id",
+		ResourceAlias: "test-resource",
+	}
+	mockClient.On("RemoveCapacity", ctx, "test-resource", uint(2)).Return(expectedInstance, nil).Once()
+
+	// Second iteration: waitForActiveState shows capacity is now 3 (target reached, loop exits)
+	finalCapacity := currentCapacity
+	finalCapacity.CurrentCapacity = 3
+	mockClient.On("GetCurrentCapacity", ctx, "test-resource").Return(finalCapacity, nil).Once()
+
+	// Call ScaleToTarget (need to scale down from 5 to 3, which is 2 steps, not 5)
+	err := autoscaler.ScaleToTarget(ctx, 3)
+
+	// Assertions
+	assert.NoError(t, err)
 	mockClient.AssertExpectations(t)
 }
